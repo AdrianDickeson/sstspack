@@ -132,6 +132,36 @@ class TestStateSpaceModel(unittest.TestCase):
         self.assertEqual(SSM.copy_missing(0, 1), 0)
         assert SSM.copy_missing(0, pd.NA) is pd.NA
 
+    def test_adapt_row_to_any_missing_data(self):
+        y_val = 2
+        y_data_uv = pd.Series(np.full(1, y_val))
+        y_missing_uv = pd.Series(np.full(1, pd.NA))
+        y_val_mv = np.full((2,1), None)
+        y_val_mv[0,0] = y_val
+        y_missing_mv = pd.Series([y_val_mv])
+        model_uv = md.get_local_level_model_data(1, 1, 1)
+        model_mv = md.get_local_level_model_data(1, 1, np.identity(2))
+
+        a0 = np.zeros((1,1))
+        P0 = np.ones((1,1))
+
+        ssm_data_uv = SSM(y_data_uv, model_uv, a0, P0)
+        ssm_data_uv.adapt_row_to_any_missing_data(0)
+        assert_array_equal(ssm_data_uv.Z[0], np.ones((1,1)))
+        assert_array_equal(ssm_data_uv.v[0], np.full((1,1), y_val))
+
+        ssm_missing_uv = SSM(y_missing_uv, model_uv, a0, P0)
+        ssm_missing_uv.adapt_row_to_any_missing_data(0)
+        assert_array_equal(ssm_missing_uv.Z[0], np.zeros((1,1)))
+        assert_array_equal(ssm_missing_uv.v[0], np.zeros((1,1)))
+
+        ssm_missing_mv = SSM(y_missing_mv, model_mv, a0, P0)
+        ssm_missing_mv.adapt_row_to_any_missing_data(0)
+        assert_array_equal(ssm_missing_mv.Z[0], np.ones((1,1)))
+        assert_array_equal(ssm_missing_mv.d[0], np.zeros((1,1)))
+        assert_array_equal(ssm_missing_mv.H[0], np.ones((1,1)))
+        assert_array_equal(ssm_missing_mv.v[0], np.full((1,1), y_val))
+
 
 if __name__ == "__main__":
     unittest.main()

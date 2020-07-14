@@ -6,7 +6,7 @@ Created on 26 Aug 2017
 
 # import exceptions as ex
 
-from numpy import dot, transpose as tr, zeros, ones, full, log, pi as PI, identity, array, isnan
+from numpy import dot, zeros, ones, full, log, pi as PI, identity, array, isnan
 from numpy.linalg import inv, det
 from numpy.random import multivariate_normal as mv_norm
 import pandas as pd
@@ -51,36 +51,41 @@ class StateSpaceModel(object):
         self.smoother_run = False
         self.disturbance_smoother_run = False
 
+    def adapt_row_to_any_missing_data(self, row):
+        '''
+        '''
+        v_shape = (self.p, 1)
+        if self.is_all_missing(self.y[row]):
+            self.Z[row] = zeros(self.Z[row].shape)
+            self.v[row] = zeros(v_shape)
+        else:
+            if self.is_partial_missing(self.y[row]):
+                W = self.remove_missing_rows(identity(self.p), self.y[row])
+                self.y[row] = self.remove_missing_rows(self.y[row], self.y[row])
+                self.Z[row] = dot(W, self.Z[row])
+                self.d[row] = dot(W, self.d[row])
+                self.H[row] = dot(dot(W, self.H[row]), W.T)
+            self.v[row] = self.y[row] - dot(self.Z[row], self.a_prior[row]) - self.d[row]
+
     def filter(self):
         '''
         '''
         for index, key in enumerate(self.model_data_df.index):
-            PZ = dot(self.P_prior[key], tr(self.Z[key]))
+            PZ = dot(self.P_prior[key], self.Z[key].T)
             self.F[key] = dot(self.Z[key], PZ) + self.H[key]
+            self.adapt_row_to_any_missing_data(key)
 
-            v_shape = (self.p, 1)
-            if self.is_all_missing(self.y[key]):
-                self.Z[key] = zeros(self.Z[key].shape)
-                self.v[key] = zeros(v_shape)
-            else:
-                if self.is_partial_missing(self.y[key]):
-                    W = self.remove_missing_rows(identity(self.p), self.y[key])
-                    self.y[key] = self.remove_missing_rows(self.y[key], self.y[key])
-                    self.Z[key] = dot(W, self.Z[key])
-                    self.d[key] = dot(W, self.d[key])
-                    self.H[key] = dot(dot(W, self.H[key]), tr(W))
-                self.v[key] = self.y[key] - dot(self.Z[key], self.a_prior[key]) - self.d[key]
-
-            PZ = dot(self.P_prior[key], tr(self.Z[key]))
+            PZ = dot(self.P_prior[key], self.Z[key].T)
             F = dot(self.Z[key], PZ) + self.H[key]
             self.F_inverse[key] = inv(F)
             PZF_inv = dot(PZ, self.F_inverse[key])
+
             self.a_posterior[key] = self.a_prior[key] + dot(PZF_inv, self.v[key])
-            self.P_posterior[key] = self.P_prior[key] - dot(PZF_inv, tr(PZ))
+            self.P_posterior[key] = self.P_prior[key] - dot(PZF_inv, PZ.T)
 
             a_prior = dot(self.T[key], self.a_posterior[key]) + self.c[key]
-            P_prior = (dot(dot(self.T[key], self.P_posterior[key]), tr(self.T[key])) +
-                       dot(dot(self.R[key], self.Q[key]), tr(self.R[key])))
+            P_prior = (dot(dot(self.T[key], self.P_posterior[key]), self.T[key].T) +
+                       dot(dot(self.R[key], self.Q[key]), self.R[key].T))
             nxt_idx = index + 1
             try:
                 nxt_key = self.model_data_df.index[nxt_idx]
@@ -103,7 +108,7 @@ class StateSpaceModel(object):
         self.N_final = zeros((self.m, self.m))
 
         for index, key in reversed(list(enumerate(self.model_data_df.index))):
-            ZF_inv = dot(tr(self.Z[key]), self.F_inverse[key])
+            ZF_inv = dot(self.Z[key].T, self.F_inverse[key])
             self.K[key] = dot(dot(self.T[key], self.P_prior[key]), ZF_inv)
             self.L[key] = self.T[key] - dot(self.K[key], self.Z[key])
 
@@ -117,9 +122,9 @@ class StateSpaceModel(object):
                 next_r = self.r[next_key]
                 next_N = self.N[next_key]
 
-            self.r[key] = dot(ZF_inv, self.v[key]) + dot(tr(self.L[key]), next_r)
+            self.r[key] = dot(ZF_inv, self.v[key]) + dot(self.L[key].T, next_r)
             self.N[key] = (dot(ZF_inv, self.Z[key]) +
-                           dot(dot(tr(self.L[key]), next_N), self.L[key]))
+                           dot(dot(self.L[key].T, next_N), self.L[key]))
 
             self.a_hat[key] = self.a_prior[key] + dot(self.P_prior[key], self.r[key])
             self.V[key] = (self.P_prior[key] -
@@ -137,7 +142,7 @@ class StateSpaceModel(object):
             self.u[key] = dot(self.F_inverse[key], self.v[key])
             self.D[key] = self.F_inverse[key].copy()
             self.eta_hat_sigma2[key] = self.Q[key].copy()
-            QR = dot(self.Q[key], tr(self.R[key]))
+            QR = dot(self.Q[key], self.R[key].T)
 
             next_index = index + 1
             try: 
@@ -145,11 +150,11 @@ class StateSpaceModel(object):
             except IndexError:
                 self.eta_hat[key] = dot(QR, self.r_final)
             else:
-                self.u[key] = self.u[key] - dot(tr(self.K[key]), self.r[next_key])
-                self.D[key] = self.D[key] + dot(dot(tr(self.K[key]), self.N[next_key]), self.K[key])
+                self.u[key] = self.u[key] - dot(self.K[key].T, self.r[next_key])
+                self.D[key] = self.D[key] + dot(dot(self.K[key].T, self.N[next_key]), self.K[key])
 
                 self.eta_hat[key] = dot(QR, self.r[next_key])
-                self.eta_hat_sigma2[key] = self.eta_hat_sigma2[key] - dot(dot(QR, self.N[next_key]), tr(QR))
+                self.eta_hat_sigma2[key] = self.eta_hat_sigma2[key] - dot(dot(QR, self.N[next_key]), QR.T)
 
             self.epsilon_hat[key] = dot(self.H[key], self.u[key])
             HDH = dot(dot(self.H[key], self.D[key]), self.H[key])
@@ -195,173 +200,19 @@ class StateSpaceModel(object):
 
         term1 = self.n * self.p * log(2. * PI)
         term2 = self.model_data_df.apply(lambda df: log(det(df['F'])), axis=1).sum()
-        term3 = self.model_data_df.apply(lambda df: dot(dot(tr(df['v']), df['F_inverse']), df['v']),
+        term3 = self.model_data_df.apply(lambda df: dot(dot(df['v'].T, df['F_inverse']), df['v']),
                                          axis=1).sum()[0, 0]
         result = -0.5 * (term1 + term2 + term3)
 
         return result
 
-    @property
-    def y(self):
+    def __getattr__(self, name):
         '''
         '''
-        return self.model_data_df['y']
-
-    @property
-    def Z(self):
-        '''
-        '''
-        return self.model_data_df['Z']
-
-    @property
-    def d(self):
-        '''
-        '''
-        return self.model_data_df['d']
-
-    @property
-    def H(self):
-        '''
-        '''
-        return self.model_data_df['H']
-
-    @property
-    def T(self):
-        '''
-        '''
-        return self.model_data_df['T']
-
-    @property
-    def c(self):
-        '''
-        '''
-        return self.model_data_df['c']
-
-    @property
-    def R(self):
-        '''
-        '''
-        return self.model_data_df['R']
-
-    @property
-    def Q(self):
-        '''
-        '''
-        return self.model_data_df['Q']
-
-    @property
-    def a_prior(self):
-        '''
-        '''
-        return self.model_data_df['a_prior']
-
-    @property
-    def a_posterior(self):
-        '''
-        '''
-        return self.model_data_df['a_posterior']
-
-    @property
-    def P_prior(self):
-        '''
-        '''
-        return self.model_data_df['P_prior']
-
-    @property
-    def P_posterior(self):                               
-        '''
-        '''
-        return self.model_data_df['P_posterior']
-
-    @property
-    def v(self):
-        '''
-        '''
-        return self.model_data_df['v']
-
-    @property
-    def F(self):
-        '''
-        '''
-        return self.model_data_df['F']
-
-    @property
-    def F_inverse(self):
-        '''
-        '''
-        return self.model_data_df['F_inverse']
-
-    @property
-    def K(self):
-        '''
-        '''
-        return self.model_data_df['K']
-
-    @property
-    def L(self):
-        '''
-        '''
-        return self.model_data_df['L']
-
-    @property
-    def r(self):
-        '''
-        '''
-        return self.model_data_df['r']
-
-    @property
-    def N(self):
-        '''
-        '''
-        return self.model_data_df['N']
-
-    @property
-    def a_hat(self):
-        '''
-        '''
-        return self.model_data_df['a_hat']
-
-    @property
-    def V(self):
-        '''
-        '''
-        return self.model_data_df['V']
-
-    @property
-    def epsilon_hat(self):
-        '''
-        '''
-        return self.model_data_df['epsilon_hat']
-
-    @property
-    def epsilon_hat_sigma2(self):
-        '''
-        '''
-        return self.model_data_df['epsilon_hat_sigma2']
-
-    @property
-    def eta_hat(self):
-        '''
-        '''
-        return self.model_data_df['eta_hat']
-
-    @property
-    def eta_hat_sigma2(self):
-        '''
-        '''
-        return self.model_data_df['eta_hat_sigma2']
-
-    @property
-    def u(self):
-        '''
-        '''
-        return self.model_data_df['u']
-
-    @property
-    def D(self):
-        '''
-        '''
-        return self.model_data_df['D']
+        try:
+            return self.model_data_df[name]
+        except KeyError:
+            raise AttributeError("'{}' object has no attribute '{}'".format(type(self).__name__, name))
 
     @staticmethod
     def is_all_missing(value):
