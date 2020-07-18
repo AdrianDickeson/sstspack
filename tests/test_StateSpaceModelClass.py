@@ -162,6 +162,77 @@ class TestStateSpaceModel(unittest.TestCase):
         assert_array_equal(ssm_missing_mv.H[0], np.ones((1,1)))
         assert_array_equal(ssm_missing_mv.v[0], np.full((1,1), y_val))
 
+    def test_set_up_initial_terms(self):
+        y_val = 2
+        y_data = pd.Series(np.full(1, y_val))
+        model = md.get_local_level_model_data(1, 1, 1)
+        a0 = np.zeros((1,1))
+        P0 = np.ones((1,1))
+        ssm_data = SSM(y_data, model, a0, P0)
+
+        a0 = 3 * np.ones((3,1))
+        P0 = 2 * np.identity(3)
+        ssm_data.set_up_initial_terms(a0, P0, None)
+        assert_array_equal(ssm_data.a_prior[0], a0)
+        assert_array_equal(ssm_data.P_prior[0], P0)
+        self.assertEqual(ssm_data.d_diffuse, -1)
+
+        a0 = 4 * np.ones((3,1))
+        P0 = 5 * np.identity(3)
+        ssm_data.set_up_initial_terms(a0, P0, [False, False, False])
+        assert_array_equal(ssm_data.a_prior[0], a0)
+        assert_array_equal(ssm_data.P_prior[0], P0)
+        self.assertEqual(ssm_data.d_diffuse, -1)
+
+        expected_a0 = np.zeros((3,1))
+        expected_a0[2,0] = a0[2,0]
+        expected_P_infinity_prior = np.identity(3)
+        expected_P_infinity_prior[2,2] = 0
+        expected_P_star_prior = np.zeros((3,3))
+        expected_P_star_prior[2,2] = P0[2,2]
+        expected_P_prior_row = np.array([0,0,P0[2,2]])
+        ssm_data.m = 3
+        ssm_data.set_up_initial_terms(a0, P0, [True, True, False])
+        assert_array_equal(ssm_data.a_prior[0], expected_a0)
+        assert_array_equal(ssm_data.P_infinity_prior[0], expected_P_infinity_prior)
+        assert_array_equal(ssm_data.P_star_prior[0], expected_P_star_prior)
+        self.assertTrue(np.isinf(ssm_data.P_prior[0][0,0]))
+        self.assertTrue(np.isinf(ssm_data.P_prior[0][1,1]))
+        assert_array_equal(ssm_data.P_prior[0][2,:], expected_P_prior_row)
+        assert_array_equal(ssm_data.P_prior[0][:,2], expected_P_prior_row)
+        self.assertEqual(ssm_data.d_diffuse, ssm_data.n)
+
+        expected_a0 = a0.copy()
+        expected_a0[0,0] = 0
+        expected_P_infinity_prior = np.zeros((3,3))
+        expected_P_infinity_prior[0,0] = 1
+        expected_P_star_prior = np.zeros((3,3))
+        expected_P_star_prior[1:,1:] = P0[1:,1:]
+        expected_P_prior_row = np.array([0,P0[1,2],P0[2,2]])
+        ssm_data.set_up_initial_terms(a0, P0, [True, False, False])
+        assert_array_equal(ssm_data.a_prior[0], expected_a0)
+        assert_array_equal(ssm_data.P_infinity_prior[0], expected_P_infinity_prior)
+        assert_array_equal(ssm_data.P_star_prior[0], expected_P_star_prior)
+        self.assertTrue(np.isinf(ssm_data.P_prior[0][0,0]))
+        assert_array_equal(ssm_data.P_prior[0][2,:], expected_P_prior_row)
+        assert_array_equal(ssm_data.P_prior[0][:,2], expected_P_prior_row)
+        self.assertEqual(ssm_data.d_diffuse, ssm_data.n)
+
+        expected_a0 = np.zeros((3,1))
+        expected_P_infinity_prior = np.identity(3)
+        expected_P_star_prior = np.zeros((3,3))
+        ssm_data.set_up_initial_terms(a0, P0, [True, True, True])
+        assert_array_equal(ssm_data.a_prior[0], expected_a0)
+        assert_array_equal(ssm_data.P_infinity_prior[0], expected_P_infinity_prior)
+        assert_array_equal(ssm_data.P_star_prior[0], expected_P_star_prior)
+        self.assertTrue(np.isinf(ssm_data.P_prior[0][0,0]))
+        self.assertTrue(np.isinf(ssm_data.P_prior[0][1,1]))
+        self.assertTrue(np.isinf(ssm_data.P_prior[0][2,2]))
+        self.assertEqual(ssm_data.d_diffuse, ssm_data.n)
+
+    def test_filter_row(self):
+        pass
+
 
 if __name__ == "__main__":
     unittest.main()

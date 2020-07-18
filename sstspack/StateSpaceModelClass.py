@@ -4,9 +4,7 @@ Created on 26 Aug 2017
 @author: adriandickeson
 '''
 
-# import exceptions as ex
-
-from numpy import dot, zeros, ones, full, log, pi as PI, identity, array, isnan
+from numpy import dot, zeros, log, pi as PI, identity, array, isnan, inf
 from numpy.linalg import inv, det
 from numpy.random import multivariate_normal as mv_norm
 import pandas as pd
@@ -22,34 +20,59 @@ class StateSpaceModel(object):
     model_parameters_df : pandas.DataFrame
     '''
 
-    def __init__(self, y_series, model_parameters_df, a_prior_initial, P_prior_initial):
+    def __init__(self, y_series, model_parameters_df, a_prior_initial, P_prior_initial, diffuse_states = None):
         '''
         Constructor
         '''
-        self.a0 = a_prior_initial
-        self.P0 = P_prior_initial
-
         self.model_data_df = model_parameters_df.copy()
         self.model_data_df.insert(0, 'y', y_series)
 
         estimation_columns = ['a_prior', 'a_posterior', 'P_prior', 'P_posterior', 'v', 'F',
                               'F_inverse', 'K', 'L', 'a_hat', 'r', 'N', 'V', 'epsilon_hat',
-                              'epsilon_hat_sigma2', 'eta_hat', 'eta_hat_sigma2', 'u', 'D']
+                              'epsilon_hat_sigma2', 'eta_hat', 'eta_hat_sigma2', 'u', 'D',
+                              'P_star_prior', 'P_infinity_prior', 'M_star', 'M_infinty', 'F0', 'F1', 'F2',
+                              'K0', 'K1', 'L0', 'L1']
         self.model_data_df = self.model_data_df.reindex(columns = self.model_data_df.columns.tolist()
                                                         + estimation_columns)
         self.model_data_df[estimation_columns] = pd.NA
 
-        initial_index = self.model_data_df.index[0]
-        self.n = len(y_series)
-        self.m = self.Z[initial_index].shape[1]
-        self.p = self.Z[initial_index].shape[0]
+        self.initial_index = self.model_data_df.index[0]
+        self.n = len(self.model_data_df)
+        self.m = self.Z[self.initial_index].shape[1]
+        self.p = self.Z[self.initial_index].shape[0]
 
-        self.a_prior[initial_index] = self.a0
-        self.P_prior[initial_index] = self.P0
+        self.set_up_initial_terms(a_prior_initial, P_prior_initial, diffuse_states)
 
         self.filter_run = False
         self.smoother_run = False
         self.disturbance_smoother_run = False
+
+    def set_up_initial_terms(self, a_prior_initial, P_prior_initial, diffuse_states):
+        '''
+        '''
+        if diffuse_states is None or not any(diffuse_states):
+            self.d_diffuse = -1
+
+            self.a_prior[self.initial_index] = a_prior_initial
+            self.P_prior[self.initial_index] = P_prior_initial
+        else:
+            self.d_diffuse = self.n
+
+            a_prior_initial[diffuse_states,0] = 0
+            self.a_prior[self.initial_index] = a_prior_initial
+
+            I = identity(self.m)
+            A = I[:,diffuse_states]
+            self.P_infinity_prior[self.initial_index] = dot(A, A.T)
+
+            proper_states = [not x for x in diffuse_states]
+            R0 = I[:,proper_states]
+            Q0 = P_prior_initial[proper_states, :]
+            Q0 = Q0[:, proper_states]
+            self.P_star_prior[self.initial_index] = dot(dot(R0, Q0), R0.T)
+
+            self.P_prior[self.initial_index] = self.P_star_prior[self.initial_index].copy()
+            self.P_prior[self.initial_index][self.P_infinity_prior[self.initial_index] == 1] = inf
 
     def adapt_row_to_any_missing_data(self, row):
         '''
@@ -171,8 +194,8 @@ class StateSpaceModel(object):
         model_fields = ['Z', 'd', 'H', 'T', 'c', 'R', 'Q']
         model_data_df = self.model_data_df[model_fields]
 
-        a0 = self.a0
-        P0 = self.P0
+        a0 = self.a_prior[self.initial_index]
+        P0 = self.P_prior[self.initial_index]
         sim_df = self.simulate_model(model_data_df, a0, P0)
         for key in self.model_data_df.index:
             sim_df.loc[key,'y'] = self.copy_missing(sim_df.loc[key,'y'], self.y[key])
