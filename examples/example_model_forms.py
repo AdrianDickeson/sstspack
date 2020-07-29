@@ -99,4 +99,23 @@ if __name__ == '__main__':
     plot_sim(ARIMA_sim, 'ARIMA model', 1, ARIMA_df)
 
 
+    a0 = zeros((s,1))
+    a0[:,0] = [-5*(i - 0.5*s) for i in range(s)]
+    P0 = identity(s)
+    SARMA_df = md.get_SARMA_model_data(100, s, phi_terms, theta_terms, Q)
+    SARMA_sim = SSM.simulate_model(SARMA_df, a0, P0)
+
+    plot_sim(SARMA_sim, 'SARMA model', 0, SARMA_df)
+
+
+    a0 = zeros((s+1, 1))
+    a0[:,0] = [-5*(i - 0.5*s) for i in range(s+1)]
+    P0 = identity(s+1)
+    ARMA_x_SARMA_df = md.get_ARMA_x_SARMA_model_data(100, phi_terms, theta_terms,
+                                                     s, phi_terms, theta_terms, Q)
+    ARMA_x_SARMA_sim = SSM.simulate_model(ARMA_x_SARMA_df, a0, P0)
+
+    plot_sim(ARMA_x_SARMA_sim, 'ARMA x SARMA model', 0, ARMA_x_SARMA_df)
+
+
     plt.show()

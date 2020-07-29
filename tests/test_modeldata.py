@@ -211,6 +211,66 @@ class Test_modeldata(unittest.TestCase):
         assert_array_equal(data_df.loc[0, 'R'], R)
         assert_array_equal(data_df.loc[0, 'Q'], Q)
 
+    def test_get_SARMA_model_data(self):
+        s = 7
+        PHI_terms = [0.25, -0.25]
+        THETA_terms = [0.4]
+        Q = full((1,1), 0.5)
+
+        data_df = md.get_SARMA_model_data(self.short_model_rows, s, PHI_terms, THETA_terms, Q)
+
+        Z = zeros((1,14))
+        Z[0,0] = 1
+        assert_array_equal(data_df.loc[0, 'Z'], Z)
+        assert_array_equal(data_df.loc[0, 'd'], zeros((1,1)))
+        assert_array_equal(data_df.loc[0, 'H'], zeros((1,1)))
+
+        T = zeros((14,14))
+        T[6,0] = PHI_terms[0]
+        T[13,0] = PHI_terms[1]
+        for idx in range(1,14):
+            T[idx-1,idx] = 1
+        assert_array_equal(data_df.loc[0, 'T'], T)
+        assert_array_equal(data_df.loc[0, 'c'], zeros((14,1)))
+        R = zeros((14,1))
+        R[0,0] = 1
+        R[7,0] = THETA_terms[0]
+        assert_array_equal(data_df.loc[0, 'R'], R)
+        assert_array_equal(data_df.loc[0, 'Q'], Q)
+
+    def test_get_ARMA_x_SARMA_model_data(self):
+        phi_terms = [0.25, -0.25]
+        theta_terms = [0.4]
+        s = 4
+        PHI_terms = [0.8]
+        THETA_terms = []
+        Q = full((1,1), 0.75)
+
+        data_df = md.get_ARMA_x_SARMA_model_data(self.short_model_rows, phi_terms, theta_terms,
+                                                 s, PHI_terms, THETA_terms, Q)
+
+        Z = zeros((1,6))
+        Z[0,0] = 1
+        assert_array_equal(data_df.Z[0], Z)
+        assert_array_equal(data_df.d[0], zeros((1,1)))
+        assert_array_equal(data_df.H[0], zeros((1,1)))
+
+        T = zeros((6,6))
+        T[0,0] = 0.25
+        T[1,0] = -0.25
+        T[3,0] = 0.8
+        T[4,0] = 0.2
+        T[5,0] = -0.2
+        for idx in range(1,6):
+            T[idx-1, idx] = 1
+        assert_array_equal(data_df.loc[0, 'T'], T)
+        assert_array_equal(data_df.c[0], zeros((6,1)))
+        R = zeros((6,1))
+        R[0,0] = 1
+        R[1,0] = 0.4
+        assert_array_equal(data_df.R[0], R)
+        assert_array_equal(data_df.Q[0], Q)
+
     def test_get_ARIMA_model_data(self):
         phi_terms = [0.25, -0.25]
         theta_terms = [0.4]
@@ -254,6 +314,14 @@ class Test_modeldata(unittest.TestCase):
         assert_array_equal(Z, ones((2,1)))
         assert_array_equal(d, zeros((2,1)))
         assert_array_equal(H, H_input)
+
+    def test_model_product(self):
+        standard_terms = [0.25, -0.25]
+        seasonal_terms = [0.5]
+        s = 4
+
+        combined_terms = md.model_product(standard_terms, s, seasonal_terms)
+        assert_array_equal(combined_terms, [0.25, -0.25, 0, 0.5, 0.125, -0.125])
 
 
 if __name__ == "__main__":
