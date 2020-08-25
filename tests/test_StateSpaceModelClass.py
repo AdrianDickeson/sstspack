@@ -28,6 +28,9 @@ class TestStateSpaceModel(unittest.TestCase):
     def GetLocalModel(self):
         return SSM(self.Y, self.local_model_data, self.a0, self.P0)
 
+    def GetDiffuseLocalModel(self):
+        return SSM(self.Y, self.local_model_data, self.a0, self.P0, [True])
+
     def setUp(self):
         # Setup local-level mpdel
         self.SetupLocalModel(series_length = 100, sigma2_eta = 0.002, H = 0.01)
@@ -39,6 +42,11 @@ class TestStateSpaceModel(unittest.TestCase):
         local_model = self.GetLocalModel()
         local_model.filter()
         self.assertTrue(local_model.filter_run)
+        self.assertAlmostEqual(local_model.a_prior_final.ravel()[0], -0.2022203)
+        self.assertAlmostEqual(local_model.P_prior_final.ravel()[0], 0.00558258)
+
+        local_model = self.GetDiffuseLocalModel()
+        local_model.filter()
         self.assertAlmostEqual(local_model.a_prior_final.ravel()[0], -0.2022203)
         self.assertAlmostEqual(local_model.P_prior_final.ravel()[0], 0.00558258)
 
@@ -64,11 +72,23 @@ class TestStateSpaceModel(unittest.TestCase):
         self.assertAlmostEqual(local_model.a_hat[0].ravel()[0], 0.15147618024595688)
         self.assertAlmostEqual(local_model.V[0].ravel()[0], 0.00356978664017194)
 
+        local_model = self.GetDiffuseLocalModel()
+        local_model.smoother()
+        self.assertTrue(local_model.smoother_run)
+        self.assertAlmostEqual(local_model.a_hat[0].ravel()[0], 0.15201885512767077)
+        self.assertAlmostEqual(local_model.V[0].ravel()[0], 0.0035825756949558396)
+
     def test_simulate_smoother(self):
         local_model = self.GetLocalModel()
         sim_df = local_model.simulate_smoother()
         self.assertAlmostEqual(sim_df['alpha'][0].ravel()[0] + sim_df['epsilon'][0].ravel()[0],
                                local_model.y[0])
+
+        local_model = self.GetDiffuseLocalModel()
+        sim_df = local_model.simulate_smoother()
+        self.assertAlmostEqual(sim_df['alpha'][0].ravel()[0] + sim_df['epsilon'][0].ravel()[0],
+                               local_model.y[0])
+
 
     def test_simulate_model(self):
         SSM.simulate_model(self.local_model_data, self.a0, self.P0)
@@ -84,6 +104,13 @@ class TestStateSpaceModel(unittest.TestCase):
         self.assertAlmostEqual(local_model.epsilon_hat_sigma2[0].ravel()[0], 0.0035697866640171582)
         self.assertAlmostEqual(local_model.eta_hat[0].ravel()[0], 0.01341154320968328)
         self.assertAlmostEqual(local_model.eta_hat_sigma2[0].ravel()[0], 0.001741661575038556)
+
+        local_model = self.GetDiffuseLocalModel()
+        local_model.disturbance_smoother()
+        self.assertAlmostEqual(local_model.epsilon_hat[0].ravel()[0], -0.06608562912767078)
+        self.assertAlmostEqual(local_model.epsilon_hat_sigma2[0].ravel()[0], 0.0035825756949558396)
+        self.assertAlmostEqual(local_model.eta_hat[0].ravel()[0], 0.013217125825534158)
+        self.assertAlmostEqual(local_model.eta_hat_sigma2[0].ravel()[0], 0.0017433030277982336)
 
     def test_is_all_missing(self):
         self.assertFalse(SSM.is_all_missing(0))
@@ -231,7 +258,95 @@ class TestStateSpaceModel(unittest.TestCase):
         self.assertEqual(ssm_data.d_diffuse, ssm_data.n)
 
     def test_filter_row(self):
-        pass
+        y_data = pd.Series([np.ones((1,1))])
+        y_missing = pd.Series([np.full((1,1), pd.NA)])
+        model_data = md.get_local_level_model_data(1, 1, 1)
+        a0 = np.zeros((1,1))
+        P0 = np.ones((1,1))
+
+        ssm_data = SSM(y_data, model_data, a0, P0)
+        ssm_data.filter()
+        assert_array_equal(ssm_data.v[0], np.ones((1,1)))
+        assert_array_equal(ssm_data.F[0], np.full((1,1), 2))
+        assert_array_equal(ssm_data.F_inverse[0], np.full((1,1), 0.5))
+        assert_array_equal(ssm_data.a_posterior[0], np.full((1,1), 0.5))
+        assert_array_equal(ssm_data.P_posterior[0], np.full((1,1), 0.5))
+        assert_array_equal(ssm_data.a_prior_final, np.full((1,1), 0.5))
+        assert_array_equal(ssm_data.P_prior_final, np.full((1,1), 1.5))
+
+        ssm_data = SSM(y_missing, model_data, a0, P0)
+        ssm_data.filter()
+        assert_array_equal(ssm_data.v[0], np.zeros((1,1)))
+        assert_array_equal(ssm_data.F[0], np.full((1,1), 2))
+        assert_array_equal(ssm_data.F_inverse[0], np.full((1,1), 1))
+        assert_array_equal(ssm_data.a_posterior[0], np.full((1,1), 0))
+        assert_array_equal(ssm_data.P_posterior[0], np.full((1,1), 1))
+        assert_array_equal(ssm_data.a_prior_final, np.full((1,1), 0))
+        assert_array_equal(ssm_data.P_prior_final, np.full((1,1), 2))
+
+        ssm_data = SSM(y_data, model_data, a0, P0, [True])
+        ssm_data.filter()
+        assert_array_equal(ssm_data.v[0], np.ones((1,1)))
+        assert_array_equal(ssm_data.F[0].shape, (1,1))
+        self.assertTrue(np.isinf(ssm_data.F[0][0,0]))
+        assert_array_equal(ssm_data.F_infinity[0], np.ones((1,1)))
+        assert_array_equal(ssm_data.F_star[0], np.ones((1,1)))
+        assert_array_equal(ssm_data.M_infinity[0], np.ones((1,1)))
+        assert_array_equal(ssm_data.M_star[0], np.zeros((1,1)))
+        assert_array_equal(ssm_data.F1[0], np.ones((1,1)))
+        assert_array_equal(ssm_data.F2[0], np.full((1,1), -1))
+        assert_array_equal(ssm_data.K0[0], np.ones((1,1)))
+        assert_array_equal(ssm_data.K1[0], np.full((1,1), -1))
+        assert_array_equal(ssm_data.L0[0], np.zeros((1,1)))
+        assert_array_equal(ssm_data.L1[0], np.ones((1,1)))
+
+        assert_array_equal(ssm_data.a_posterior[0], np.ones((1,1)))
+        assert_array_equal(ssm_data.a_prior_final, np.ones((1,1)))
+        assert_array_equal(ssm_data.P_infinity_posterior[0], np.zeros((1,1)))
+        assert_array_equal(ssm_data.P_star_posterior[0], np.ones((1,1)))
+        assert_array_equal(ssm_data.P_posterior[0], np.ones((1,1)))
+
+        assert_array_equal(ssm_data.a_prior_final, np.full((1,1), 1))
+        assert_array_equal(ssm_data.P_prior_final, np.full((1,1), 2))
+        self.assertEqual(ssm_data.d_diffuse, 0)
+
+        ssm_data = SSM(y_missing, model_data, a0, P0, [True])
+        ssm_data.filter()
+        assert_array_equal(ssm_data.a_prior[0], np.zeros((1,1)))
+        assert_array_equal(ssm_data.P_infinity_prior[0], np.ones((1,1)))
+        assert_array_equal(ssm_data.P_star_prior[0], np.zeros((1,1)))
+        assert_array_equal(ssm_data.P_prior[0].shape, (1,1))
+        self.assertTrue(np.isinf(ssm_data.P_prior[0][0,0]))
+        assert_array_equal(ssm_data.v[0], np.zeros((1,1)))
+        assert_array_equal(ssm_data.Z[0], np.zeros((1,1)))
+        assert_array_equal(ssm_data.F[0].shape, (1,1))
+        self.assertTrue(np.isinf(ssm_data.F[0][0,0]))
+        assert_array_equal(ssm_data.F_inverse[0], np.full((1,1), 1))
+        assert_array_equal(ssm_data.a_posterior[0], np.full((1,1), 0))
+        assert_array_equal(ssm_data.P_infinity_posterior[0], ssm_data.P_infinity_prior[0])
+        assert_array_equal(ssm_data.P_star_posterior[0], ssm_data.P_star_prior[0])
+        assert_array_equal(ssm_data.P_posterior[0].shape, (1,1))
+        self.assertTrue(np.isinf(ssm_data.P_posterior[0][0,0]))
+        assert_array_equal(ssm_data.a_prior_final, np.full((1,1), 0))
+        assert_array_equal(ssm_data.P_prior_final.shape, (1,1))
+        self.assertTrue(np.isinf(ssm_data.P_prior_final[0,0]))
+        self.assertEqual(ssm_data.d_diffuse, 1)
+
+    def test_diffuse_P(self):
+        P_star = np.full((1,1), 2.)
+        result = SSM.diffuse_P(P_star, np.zeros((1,1)))
+        assert_array_equal(result, P_star)
+
+        result = SSM.diffuse_P(P_star, np.ones((1,1)))
+        assert_array_equal(result.shape, (1,1))
+        self.assertTrue(np.isinf(result[0,0]))
+
+        P_star = np.identity(2)
+        P_star[1,1] = 0
+        P_infinity = np.identity(2)
+        result = SSM.diffuse_P(P_star, P_infinity)
+        self.assertTrue(np.isinf(result[0,0]))
+        self.assertTrue(np.isinf(result[1,1]))
 
 
 if __name__ == "__main__":

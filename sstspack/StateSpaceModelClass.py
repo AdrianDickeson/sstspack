@@ -4,10 +4,11 @@ Created on 26 Aug 2017
 @author: adriandickeson
 '''
 
-from numpy import dot, zeros, log, pi as PI, identity, array, isnan, inf
-from numpy.linalg import inv, det
+from numpy import dot, zeros, ravel, log, pi as PI, identity, array, isnan, inf
+from numpy.linalg import inv, det, LinAlgError
 from numpy.random import multivariate_normal as mv_norm
 import pandas as pd
+from symbol import except_clause
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -30,9 +31,12 @@ class StateSpaceModel(object):
         estimation_columns = ['a_prior', 'a_posterior', 'P_prior', 'P_posterior', 'v', 'F',
                               'F_inverse', 'K', 'L', 'a_hat', 'r', 'N', 'V', 'epsilon_hat',
                               'epsilon_hat_sigma2', 'eta_hat', 'eta_hat_sigma2', 'u', 'D',
-                              'P_star_prior', 'P_infinity_prior', 'M_star', 'M_infinty', 'F0', 'F1', 'F2',
-                              'K0', 'K1', 'L0', 'L1']
-        self.model_data_df = self.model_data_df.reindex(columns = self.model_data_df.columns.tolist()
+                              'P_star_prior', 'P_infinity_prior', 'M_star', 'M_infinity',
+                              'F1', 'F2', 'K0', 'K1', 'L0', 'L1', 'P_star_posterior',
+                              'P_infinity_posterior', 'F_star', 'F_infinity', 'r0', 'r1',
+                              'N0', 'N1', 'N2']
+        self.model_data_df = self.model_data_df.reindex(columns =
+                                                        self.model_data_df.columns.tolist()
                                                         + estimation_columns)
         self.model_data_df[estimation_columns] = pd.NA
 
@@ -71,8 +75,9 @@ class StateSpaceModel(object):
             Q0 = Q0[:, proper_states]
             self.P_star_prior[self.initial_index] = dot(dot(R0, Q0), R0.T)
 
-            self.P_prior[self.initial_index] = self.P_star_prior[self.initial_index].copy()
-            self.P_prior[self.initial_index][self.P_infinity_prior[self.initial_index] == 1] = inf
+            self.P_prior[self.initial_index] = self.diffuse_P(\
+                                                      self.P_star_prior[self.initial_index],\
+                                                      self.P_infinity_prior[self.initial_index])
 
     def adapt_row_to_any_missing_data(self, row):
         '''
@@ -98,26 +103,83 @@ class StateSpaceModel(object):
             self.F[key] = dot(self.Z[key], PZ) + self.H[key]
             self.adapt_row_to_any_missing_data(key)
 
-            PZ = dot(self.P_prior[key], self.Z[key].T)
-            F = dot(self.Z[key], PZ) + self.H[key]
-            self.F_inverse[key] = inv(F)
-            PZF_inv = dot(PZ, self.F_inverse[key])
+            if index <= self.d_diffuse:
+                #TODO: Deal with multivariate data
+                self.F_infinity[key] = dot(dot(self.Z[key], self.P_infinity_prior[key]),
+                                           self.Z[key].T)
+                self.F_star[key] = dot(dot(self.Z[key], self.P_star_prior[key]), self.Z[key].T) +\
+                                    self.H[key]
 
-            self.a_posterior[key] = self.a_prior[key] + dot(PZF_inv, self.v[key])
-            self.P_posterior[key] = self.P_prior[key] - dot(PZF_inv, PZ.T)
+                self.M_infinity[key] = dot(self.P_infinity_prior[key], self.Z[key].T)
+                self.M_star[key] = dot(self.P_star_prior[key], self.Z[key].T)
 
+                try:
+                    self.F1[key] = inv(self.F_infinity[key])
+                except LinAlgError:
+                    F = self.F_star[key].copy()
+                    self.F_inverse[key] = inv(F)
+
+                    K0_hat = dot(self.M_star[key], self.F_inverse[key])
+                    K1_hat = zeros((self.m, self.p))
+                else:
+                    self.F2[key] = -1 * dot(dot(self.F1[key], self.F_star[key]), self.F1[key])
+
+                    K0_hat = dot(self.M_infinity[key], self.F1[key])
+                    K1_hat = dot(self.M_star[key], self.F1[key]) +\
+                                dot(self.M_infinity[key], self.F2[key])
+                self.K0[key] = dot(self.T[key], K0_hat)
+                self.K1[key] = dot(self.T[key], K1_hat)
+
+                L0_hat = identity(self.m) - dot(K0_hat, self.Z[key])
+                L1_hat = -1 * dot(K1_hat, self.Z[key])
+                self.L0[key] = dot(self.T[key], L0_hat)
+                self.L1[key] = dot(self.T[key], L1_hat)
+
+                self.a_posterior[key] = self.a_prior[key] + dot(K0_hat, self.v[key])
+                self.P_infinity_posterior[key] = dot(self.P_infinity_prior[key], L0_hat.T)
+                self.P_star_posterior[key] = dot(self.P_infinity_prior[key], L1_hat.T) +\
+                                                dot(self.P_star_prior[key], L0_hat.T)
+                self.P_posterior[key] = self.diffuse_P(self.P_star_posterior[key],\
+                                                       self.P_infinity_posterior[key])
+
+                if all(ravel(self.P_infinity_posterior[key] == 0)):
+                    self.d_diffuse = index
+            else:
+                PZ = dot(self.P_prior[key], self.Z[key].T)
+                F = dot(self.Z[key], PZ) + self.H[key]
+                self.F_inverse[key] = inv(F)
+                PZF_inv = dot(PZ, self.F_inverse[key])
+
+                self.a_posterior[key] = self.a_prior[key] + dot(PZF_inv, self.v[key])
+                self.P_posterior[key] = self.P_prior[key] - dot(PZF_inv, PZ.T)
+
+            RQR = dot(dot(self.R[key], self.Q[key]), self.R[key].T)
             a_prior = dot(self.T[key], self.a_posterior[key]) + self.c[key]
-            P_prior = (dot(dot(self.T[key], self.P_posterior[key]), self.T[key].T) +
-                       dot(dot(self.R[key], self.Q[key]), self.R[key].T))
+            P_prior = dot(dot(self.T[key], self.P_posterior[key]), self.T[key].T) + RQR
+
+            if index < self.d_diffuse:
+                P_infinity_prior = dot(dot(self.T[key], self.P_infinity_posterior[key]),
+                                       self.T[key].T)
+                P_star_prior = dot(dot(self.T[key], self.P_star_posterior[key]),
+                                    self.T[key].T) + RQR
+                P_prior = self.diffuse_P(P_star_prior, P_infinity_prior)
+
             nxt_idx = index + 1
             try:
                 nxt_key = self.model_data_df.index[nxt_idx]
             except IndexError:
                 self.a_prior_final = a_prior
                 self.P_prior_final = P_prior
+                if index < self.d_diffuse:
+                    self.P_infinity_prior_final = P_infinity_prior
+                    self.P_star_prior_final = P_star_prior
+                    # TODO: Worn user distribution is still diffuse
             else:
                 self.a_prior[nxt_key] = a_prior
                 self.P_prior[nxt_key] = P_prior
+                if index < self.d_diffuse:
+                    self.P_infinity_prior[nxt_key] = P_infinity_prior
+                    self.P_star_prior[nxt_key] = P_star_prior
 
         self.filter_run = True
 
@@ -129,6 +191,17 @@ class StateSpaceModel(object):
 
         self.r_final = zeros((self.m, 1))
         self.N_final = zeros((self.m, self.m))
+        self.r0_final = None
+        self.r1_final = None
+        self.N0_final = None
+        self.N1_final = None
+        self.N2_final = None
+        if self.d_diffuse + 1 >= self.n:
+            self.r0_final = self.r_final.copy()
+            self.r1_final = self.r_final.copy()
+            self.N0_final = self.N_final.copy()
+            self.N1_final = self.N_final.copy()
+            self.N2_final = self.N_final.copy()
 
         for index, key in reversed(list(enumerate(self.model_data_df.index))):
             ZF_inv = dot(self.Z[key].T, self.F_inverse[key])
@@ -141,17 +214,58 @@ class StateSpaceModel(object):
             except IndexError:
                 next_r = self.r_final
                 next_N = self.N_final
+                if index <= self.d_diffuse:
+                    next_r0 = self.r0_final
+                    next_r1 = self.r1_final
+                    next_N0 = self.N0_final
+                    next_N1 = self.N1_final
+                    next_N2 = self.N2_final
             else:
                 next_r = self.r[next_key]
                 next_N = self.N[next_key]
+                if index <= self.d_diffuse:
+                    next_r0 = self.r0[next_key]
+                    next_r1 = self.r1[next_key]
+                    next_N0 = self.N0[next_key]
+                    next_N1 = self.N1[next_key]
+                    next_N2 = self.N2[next_key]
 
-            self.r[key] = dot(ZF_inv, self.v[key]) + dot(self.L[key].T, next_r)
-            self.N[key] = (dot(ZF_inv, self.Z[key]) +
-                           dot(dot(self.L[key].T, next_N), self.L[key]))
+            if index <= self.d_diffuse:
+                # TODO:  Deal with case when F_infinity == 0
+                self.r0[key] = dot(self.L0[key].T, next_r0)
+                self.r1[key] = dot(dot(self.Z[key].T, self.F1[key]), self.v[key]) +\
+                        dot(self.L0[key].T, next_r1) + dot(self.L1[key].T, next_r0)
+                self.N0[key] = dot(dot(self.L0[key].T, next_N0), self.L0[key])
+                self.N1[key] = dot(dot(self.Z[key].T, self.F1[key]), self.Z[key]) +\
+                        dot(dot(self.L0[key].T, next_N1), self.L0[key]) +\
+                        dot(dot(self.L1[key].T, next_N0), self.L0[key])
+                self.N2[key] = dot(dot(self.Z[key].T, self.F2[key]), self.Z[key]) +\
+                        dot(dot(self.L0[key].T, next_N2), self.L0[key]) +\
+                        dot(dot(self.L0[key].T, next_N1), self.L1[key]) +\
+                        dot(dot(self.L1[key].T, next_N1), self.L0[key]) +\
+                        dot(dot(self.L1[key].T, next_N0), self.L1[key])
 
-            self.a_hat[key] = self.a_prior[key] + dot(self.P_prior[key], self.r[key])
-            self.V[key] = (self.P_prior[key] -
-                           dot(dot(self.P_prior[key], self.N[key]), self.P_prior[key]))
+                self.a_hat[key] = self.a_prior[key] + dot(self.P_star_prior[key], self.r0[key]) +\
+                        dot(self.P_infinity_prior[key], self.r1[key])
+                self.V[key] = self.P_star_prior[key] -\
+                    dot(dot(self.P_star_prior[key], self.N0[key]), self.P_star_prior[key]) -\
+                    (dot(dot(self.P_infinity_prior[key], self.N1[key]), self.P_star_prior[key])).T -\
+                    dot(dot(self.P_infinity_prior[key], self.N1[key]), self.P_star_prior[key]) -\
+                    dot(dot(self.P_infinity_prior[key], self.N2[key]), self.P_infinity_prior[key])
+            else:
+                self.r[key] = dot(ZF_inv, self.v[key]) + dot(self.L[key].T, next_r)
+                self.N[key] = (dot(ZF_inv, self.Z[key]) +
+                               dot(dot(self.L[key].T, next_N), self.L[key]))
+                if index == self.d_diffuse + 1:
+                    self.r0[key] = self.r[key]
+                    self.r1[key] = zeros((self.m, 1))
+                    self.N0[key] = self.N[key].copy()
+                    self.N1[key] = zeros((self.m, self.m))
+                    self.N2[key] = zeros((self.m, self.m))
+
+                self.a_hat[key] = self.a_prior[key] + dot(self.P_prior[key], self.r[key])
+                self.V[key] = (self.P_prior[key] -
+                               dot(dot(self.P_prior[key], self.N[key]), self.P_prior[key]))
 
         self.smoother_run = True
 
@@ -162,26 +276,52 @@ class StateSpaceModel(object):
             self.smoother()
 
         for index, key in reversed(list(enumerate(self.model_data_df.index))):
-            self.u[key] = dot(self.F_inverse[key], self.v[key])
-            self.D[key] = self.F_inverse[key].copy()
-            self.eta_hat_sigma2[key] = self.Q[key].copy()
-            QR = dot(self.Q[key], self.R[key].T)
+            if index <= self.d_diffuse:
+                next_index = index + 1
+                try:
+                    next_key = self.model_data_df.index[next_index]
+                except IndexError:
+                    next_r0 = self.r_final
+                    next_N0 = self.N_final
+                else:
+                    next_r0 = self.r0[next_key]
+                    next_N0 = self.N0[next_key]
 
-            next_index = index + 1
-            try: 
-                next_key = self.model_data_df.index[next_index]
-            except IndexError:
-                self.eta_hat[key] = dot(QR, self.r_final)
+                if det(self.F_infinity[key]) == 0:
+                    self,epsilon_hat[key] = dot(self.H[key], dot(self.F_inverse[key], self.v[key]) -\
+                                                            dot(self.K0[key], next_r0))
+                    self.epsilon_hat_sigma2[key] = self.H[key] - dot(dot(self.H[key], 
+                                self.F_inverse[key] + dot(dot(self.K0[key].T, next_N0),
+                                                          self.K0[key])), self.H[key])
+                else:
+                    self.epsilon_hat[key] = -1 * dot(dot(self.H[key], self.K0[key].T), next_r0)
+                    self.epsilon_hat_sigma2[key] = self.H[key] - dot(dot(dot(dot(self.H[key],
+                                 self.K0[key].T), next_N0), self.K0[key]), self.H[key])
+
+                self.eta_hat[key] = dot(dot(self.Q[key], self.R[key].T), next_r0)
+                self.eta_hat_sigma2[key] = self.Q[key] - dot(dot(dot(dot(self.Q[key],
+                             self.R[key].T), next_N0), self.R[key]), self.Q[key])
             else:
-                self.u[key] = self.u[key] - dot(self.K[key].T, self.r[next_key])
-                self.D[key] = self.D[key] + dot(dot(self.K[key].T, self.N[next_key]), self.K[key])
+                self.u[key] = dot(self.F_inverse[key], self.v[key])
+                self.D[key] = self.F_inverse[key].copy()
+                self.eta_hat_sigma2[key] = self.Q[key].copy()
+                QR = dot(self.Q[key], self.R[key].T)
 
-                self.eta_hat[key] = dot(QR, self.r[next_key])
-                self.eta_hat_sigma2[key] = self.eta_hat_sigma2[key] - dot(dot(QR, self.N[next_key]), QR.T)
+                next_index = index + 1
+                try: 
+                    next_key = self.model_data_df.index[next_index]
+                except IndexError:
+                    self.eta_hat[key] = dot(QR, self.r_final)
+                else:
+                    self.u[key] = self.u[key] - dot(self.K[key].T, self.r[next_key])
+                    self.D[key] = self.D[key] + dot(dot(self.K[key].T, self.N[next_key]), self.K[key])
 
-            self.epsilon_hat[key] = dot(self.H[key], self.u[key])
-            HDH = dot(dot(self.H[key], self.D[key]), self.H[key])
-            self.epsilon_hat_sigma2[key] = self.H[key] - HDH
+                    self.eta_hat[key] = dot(QR, self.r[next_key])
+                    self.eta_hat_sigma2[key] = self.eta_hat_sigma2[key] - dot(dot(QR, self.N[next_key]), QR.T)
+
+                self.epsilon_hat[key] = dot(self.H[key], self.u[key])
+                HDH = dot(dot(self.H[key], self.D[key]), self.H[key])
+                self.epsilon_hat_sigma2[key] = self.H[key] - HDH
 
         self.disturbance_smoother_run = True
 
@@ -194,9 +334,16 @@ class StateSpaceModel(object):
         model_fields = ['Z', 'd', 'H', 'T', 'c', 'R', 'Q']
         model_data_df = self.model_data_df[model_fields]
 
-        a0 = self.a_prior[self.initial_index]
-        P0 = self.P_prior[self.initial_index]
-        sim_df = self.simulate_model(model_data_df, a0, P0)
+        if self.d_diffuse >= 0:
+            a0 = self.a_hat[self.initial_index]
+            V0 = self.V[self.initial_index]
+            sim_df = self.simulate_model(model_data_df, a0, V0)
+            P0 = zeros((self.m, self.m))
+        else:
+            a0 = self.a_prior[self.initial_index]
+            P0 = self.P_prior[self.initial_index]
+            sim_df = self.simulate_model(model_data_df, a0, P0)
+
         for key in self.model_data_df.index:
             sim_df.loc[key,'y'] = self.copy_missing(sim_df.loc[key,'y'], self.y[key])
 
@@ -338,3 +485,11 @@ class StateSpaceModel(object):
             result_df.loc[key, 'y'] = curr_Y
 
         return result_df
+
+    @staticmethod
+    def diffuse_P(P_star, P_infinity):
+        '''
+        '''
+        result = P_star.copy()
+        result[P_infinity != 0] = inf
+        return result
