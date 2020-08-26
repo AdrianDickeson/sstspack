@@ -4,11 +4,10 @@ Created on 26 Aug 2017
 @author: adriandickeson
 '''
 
-from numpy import dot, zeros, ravel, log, pi as PI, identity, array, isnan, inf
+from numpy import dot, zeros, ravel, log, pi as PI, identity, array, isnan, inf, sum
 from numpy.linalg import inv, det, LinAlgError
 from numpy.random import multivariate_normal as mv_norm
 import pandas as pd
-from symbol import except_clause
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -40,16 +39,35 @@ class StateSpaceModel(object):
                                                         + estimation_columns)
         self.model_data_df[estimation_columns] = pd.NA
 
-        self.initial_index = self.model_data_df.index[0]
-        self.n = len(self.model_data_df)
-        self.m = self.Z[self.initial_index].shape[1]
-        self.p = self.Z[self.initial_index].shape[0]
-
         self.set_up_initial_terms(a_prior_initial, P_prior_initial, diffuse_states)
 
         self.filter_run = False
         self.smoother_run = False
         self.disturbance_smoother_run = False
+
+    @property
+    def initial_index(self):
+        '''
+        '''
+        return self.model_data_df.index[0]
+
+    @property
+    def n(self):
+        '''
+        '''
+        return len(self.model_data_df)
+
+    @property
+    def m(self):
+        '''
+        '''
+        return self.Z[self.initial_index].shape[1]
+
+    @property
+    def p(self):
+        '''
+        '''
+        return [self.Z[key].shape[0] for key in self.model_data_df.index]
 
     def set_up_initial_terms(self, a_prior_initial, P_prior_initial, diffuse_states):
         '''
@@ -79,16 +97,16 @@ class StateSpaceModel(object):
                                                       self.P_star_prior[self.initial_index],\
                                                       self.P_infinity_prior[self.initial_index])
 
-    def adapt_row_to_any_missing_data(self, row):
+    def adapt_row_to_any_missing_data(self, index, row):
         '''
         '''
-        v_shape = (self.p, 1)
-        if self.is_all_missing(self.y[row]):
+        v_shape = (self.p[index], 1)
+        if self.is_all_missing(self.y[index]):
             self.Z[row] = zeros(self.Z[row].shape)
             self.v[row] = zeros(v_shape)
         else:
             if self.is_partial_missing(self.y[row]):
-                W = self.remove_missing_rows(identity(self.p), self.y[row])
+                W = self.remove_missing_rows(identity(self.p[index]), self.y[row])
                 self.y[row] = self.remove_missing_rows(self.y[row], self.y[row])
                 self.Z[row] = dot(W, self.Z[row])
                 self.d[row] = dot(W, self.d[row])
@@ -101,7 +119,7 @@ class StateSpaceModel(object):
         for index, key in enumerate(self.model_data_df.index):
             PZ = dot(self.P_prior[key], self.Z[key].T)
             self.F[key] = dot(self.Z[key], PZ) + self.H[key]
-            self.adapt_row_to_any_missing_data(key)
+            self.adapt_row_to_any_missing_data(index, key)
 
             if index <= self.d_diffuse:
                 #TODO: Deal with multivariate data
@@ -120,7 +138,7 @@ class StateSpaceModel(object):
                     self.F_inverse[key] = inv(F)
 
                     K0_hat = dot(self.M_star[key], self.F_inverse[key])
-                    K1_hat = zeros((self.m, self.p))
+                    K1_hat = zeros((self.m, self.p[index]))
                 else:
                     self.F2[key] = -1 * dot(dot(self.F1[key], self.F_star[key]), self.F1[key])
 
@@ -368,11 +386,11 @@ class StateSpaceModel(object):
         if not self.filter_run:
             self.filter()
 
-        term1 = self.n * self.p * log(2. * PI)
-        term2 = self.model_data_df.apply(lambda df: log(det(df['F'])), axis=1).sum()
+        term1 = sum([p * log(2. * PI) for p in self.p])
+        term2 = self.model_data_df.apply(lambda df: log(det(df['F_inverse'])), axis=1).sum()
         term3 = self.model_data_df.apply(lambda df: dot(dot(df['v'].T, df['F_inverse']), df['v']),
                                          axis=1).sum()[0, 0]
-        result = -0.5 * (term1 + term2 + term3)
+        result = -0.5 * (term1 - term2 + term3)
 
         return result
 
