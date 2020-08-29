@@ -8,6 +8,7 @@ from numpy import dot, zeros, ravel, log, pi as PI, identity, array, isnan, inf,
 from numpy.linalg import inv, det, LinAlgError
 from numpy.random import multivariate_normal as mv_norm
 import pandas as pd
+from _sqlite3 import Row
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -33,11 +34,12 @@ class StateSpaceModel(object):
                               'P_star_prior', 'P_infinity_prior', 'M_star', 'M_infinity',
                               'F1', 'F2', 'K0', 'K1', 'L0', 'L1', 'P_star_posterior',
                               'P_infinity_posterior', 'F_star', 'F_infinity', 'r0', 'r1',
-                              'N0', 'N1', 'N2']
+                              'N0', 'N1', 'N2', 'p']
         self.model_data_df = self.model_data_df.reindex(columns =
                                                         self.model_data_df.columns.tolist()
                                                         + estimation_columns)
         self.model_data_df[estimation_columns] = pd.NA
+        self.p = [self.Z[key].shape[0] for key in self.index]
 
         self.set_up_initial_terms(a_prior_initial, P_prior_initial, diffuse_states)
 
@@ -46,10 +48,16 @@ class StateSpaceModel(object):
         self.disturbance_smoother_run = False
 
     @property
+    def index(self):
+        '''
+        '''
+        return self.model_data_df.index
+
+    @property
     def initial_index(self):
         '''
         '''
-        return self.model_data_df.index[0]
+        return self.index[0]
 
     @property
     def n(self):
@@ -63,11 +71,11 @@ class StateSpaceModel(object):
         '''
         return self.Z[self.initial_index].shape[1]
 
-    @property
-    def p(self):
-        '''
-        '''
-        return [self.Z[key].shape[0] for key in self.model_data_df.index]
+#     @property
+#     def p(self):
+#         '''
+#         '''
+#         return [self.Z[key].shape[0] for key in self.index]
 
     def set_up_initial_terms(self, a_prior_initial, P_prior_initial, diffuse_states):
         '''
@@ -97,29 +105,31 @@ class StateSpaceModel(object):
                                                       self.P_star_prior[self.initial_index],\
                                                       self.P_infinity_prior[self.initial_index])
 
-    def adapt_row_to_any_missing_data(self, index, row):
+    def adapt_row_to_any_missing_data(self, row):
         '''
         '''
-        v_shape = (self.p[index], 1)
-        if self.is_all_missing(self.y[index]):
+        v_shape = (self.p[row], 1)
+        if self.is_all_missing(self.y[row]):
             self.Z[row] = zeros(self.Z[row].shape)
             self.v[row] = zeros(v_shape)
+            self.p[row] = 0
         else:
             if self.is_partial_missing(self.y[row]):
-                W = self.remove_missing_rows(identity(self.p[index]), self.y[row])
+                W = self.remove_missing_rows(identity(self.p[row]), self.y[row])
                 self.y[row] = self.remove_missing_rows(self.y[row], self.y[row])
                 self.Z[row] = dot(W, self.Z[row])
                 self.d[row] = dot(W, self.d[row])
                 self.H[row] = dot(dot(W, self.H[row]), W.T)
+                self.p[row] = self.Z[row].shape[0]
             self.v[row] = self.y[row] - dot(self.Z[row], self.a_prior[row]) - self.d[row]
 
     def filter(self):
         '''
         '''
-        for index, key in enumerate(self.model_data_df.index):
+        for index, key in enumerate(self.index):
             PZ = dot(self.P_prior[key], self.Z[key].T)
             self.F[key] = dot(self.Z[key], PZ) + self.H[key]
-            self.adapt_row_to_any_missing_data(index, key)
+            self.adapt_row_to_any_missing_data(key)
 
             if index <= self.d_diffuse:
                 #TODO: Deal with multivariate data
@@ -138,7 +148,7 @@ class StateSpaceModel(object):
                     self.F_inverse[key] = inv(F)
 
                     K0_hat = dot(self.M_star[key], self.F_inverse[key])
-                    K1_hat = zeros((self.m, self.p[index]))
+                    K1_hat = zeros((self.m, self.Z[key].shape[0]))
                 else:
                     self.F2[key] = -1 * dot(dot(self.F1[key], self.F_star[key]), self.F1[key])
 
@@ -184,7 +194,7 @@ class StateSpaceModel(object):
 
             nxt_idx = index + 1
             try:
-                nxt_key = self.model_data_df.index[nxt_idx]
+                nxt_key = self.index[nxt_idx]
             except IndexError:
                 self.a_prior_final = a_prior
                 self.P_prior_final = P_prior
@@ -221,14 +231,14 @@ class StateSpaceModel(object):
             self.N1_final = self.N_final.copy()
             self.N2_final = self.N_final.copy()
 
-        for index, key in reversed(list(enumerate(self.model_data_df.index))):
+        for index, key in reversed(list(enumerate(self.index))):
             ZF_inv = dot(self.Z[key].T, self.F_inverse[key])
             self.K[key] = dot(dot(self.T[key], self.P_prior[key]), ZF_inv)
             self.L[key] = self.T[key] - dot(self.K[key], self.Z[key])
 
             next_index = index + 1
             try:
-                next_key = self.model_data_df.index[next_index]
+                next_key = self.index[next_index]
             except IndexError:
                 next_r = self.r_final
                 next_N = self.N_final
@@ -293,11 +303,11 @@ class StateSpaceModel(object):
         if not self.smoother_run:
             self.smoother()
 
-        for index, key in reversed(list(enumerate(self.model_data_df.index))):
+        for index, key in reversed(list(enumerate(self.index))):
             if index <= self.d_diffuse:
                 next_index = index + 1
                 try:
-                    next_key = self.model_data_df.index[next_index]
+                    next_key = self.index[next_index]
                 except IndexError:
                     next_r0 = self.r_final
                     next_N0 = self.N_final
@@ -327,7 +337,7 @@ class StateSpaceModel(object):
 
                 next_index = index + 1
                 try: 
-                    next_key = self.model_data_df.index[next_index]
+                    next_key = self.index[next_index]
                 except IndexError:
                     self.eta_hat[key] = dot(QR, self.r_final)
                 else:
@@ -362,7 +372,7 @@ class StateSpaceModel(object):
             P0 = self.P_prior[self.initial_index]
             sim_df = self.simulate_model(model_data_df, a0, P0)
 
-        for key in self.model_data_df.index:
+        for key in self.index:
             sim_df.loc[key,'y'] = self.copy_missing(sim_df.loc[key,'y'], self.y[key])
 
         sim_ssm = StateSpaceModel(sim_df['y'], model_data_df, a0, P0)
@@ -386,13 +396,30 @@ class StateSpaceModel(object):
         if not self.filter_run:
             self.filter()
 
-        term1 = sum([p * log(2. * PI) for p in self.p])
-        term2 = self.model_data_df.apply(lambda df: log(det(df['F_inverse'])), axis=1).sum()
-        term3 = self.model_data_df.apply(lambda df: dot(dot(df['v'].T, df['F_inverse']), df['v']),
-                                         axis=1).sum()[0, 0]
-        result = -0.5 * (term1 - term2 + term3)
+        result = 0
+        for index, key in enumerate(self.index):
+            if self.p[key] > 0:
+                result += self.p[key] * log(2 * PI)
+                F_inv = self.F_inverse[key]
+                if index <= self.d_diffuse and F_inv is pd.NA:
+                    result += self.w(index, key)
+                else:
+                    result -= log(det(F_inv))
+                    result += dot(dot(self.v[key], F_inv), self.v[key])[0,0]
+        result *= -0.5
 
         return result
+
+    def w(self, index, key):
+        '''
+        '''
+        if index > self.d_diffuse:
+            return 0
+
+        if self.F_inverse[key] is pd.NA:
+            return log(det(self.F_infinity[key]))
+        return dot(dot(self.v[key], self.F_inverse[key]), self.v[key])[0,0] -\
+            log(det(self.F_inverse[key]))
 
     def __getattr__(self, name):
         '''

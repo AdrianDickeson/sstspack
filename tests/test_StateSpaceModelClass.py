@@ -96,7 +96,17 @@ class TestStateSpaceModel(unittest.TestCase):
     def test_log_likelihood(self):
         local_model = self.GetLocalModel()
         log_lik = local_model.log_likelihood()
-        self.assertTrue(log_lik, 36.032667773295756)
+        self.assertAlmostEqual(log_lik, 36.032667773295756)
+
+        local_model = self.GetDiffuseLocalModel()
+        diffuse_log_lik = local_model.log_likelihood()
+        self.assertAlmostEqual(diffuse_log_lik, 36.04596947782409)
+
+        missing_y = self.Y.copy()
+        missing_y[20:30] = None
+        local_model = SSM(missing_y, self.local_model_data, self.a0, self.P0)
+        log_lik = local_model.log_likelihood()
+        self.assertAlmostEqual(log_lik, 28.047420202120488)
 
     def test_disturbance_smoother(self):
         local_model = self.GetLocalModel()
@@ -174,17 +184,17 @@ class TestStateSpaceModel(unittest.TestCase):
         P0 = np.ones((1,1))
 
         ssm_data_uv = SSM(y_data_uv, model_uv, a0, P0)
-        ssm_data_uv.adapt_row_to_any_missing_data(0,0)
+        ssm_data_uv.adapt_row_to_any_missing_data(0)
         assert_array_equal(ssm_data_uv.Z[0], np.ones((1,1)))
         assert_array_equal(ssm_data_uv.v[0], np.full((1,1), y_val))
 
         ssm_missing_uv = SSM(y_missing_uv, model_uv, a0, P0)
-        ssm_missing_uv.adapt_row_to_any_missing_data(0,0)
+        ssm_missing_uv.adapt_row_to_any_missing_data(0)
         assert_array_equal(ssm_missing_uv.Z[0], np.zeros((1,1)))
         assert_array_equal(ssm_missing_uv.v[0], np.zeros((1,1)))
 
         ssm_missing_mv = SSM(y_missing_mv, model_mv, a0, P0)
-        ssm_missing_mv.adapt_row_to_any_missing_data(0,0)
+        ssm_missing_mv.adapt_row_to_any_missing_data(0)
         assert_array_equal(ssm_missing_mv.Z[0], np.ones((1,1)))
         assert_array_equal(ssm_missing_mv.d[0], np.zeros((1,1)))
         assert_array_equal(ssm_missing_mv.H[0], np.ones((1,1)))
