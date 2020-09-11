@@ -112,36 +112,65 @@ def get_ARMA_x_SARMA_model_data(series_length, phi_terms, theta_terms,
                                 s, PHI_terms, THETA_terms, Q):
     '''
     '''
-    full_phi_terms = model_product(phi_terms, s, PHI_terms)
-    full_theta_terms = model_product(theta_terms, s, THETA_terms)
-    return get_ARIMA_model_data(series_length, full_phi_terms, 0, full_theta_terms, Q)
+    return get_ARIMA_x_SARIMA_model_data(series_length, phi_terms, 0, theta_terms,
+                                         s, PHI_terms, 0, THETA_terms, Q)
 
 def get_ARIMA_model_data(series_length, phi_terms, d, theta_terms, Q):
     '''
     '''
-    r = max(len(phi_terms), len(theta_terms)+1)
+    return get_ARIMA_x_SARIMA_model_data(series_length, phi_terms, d, theta_terms,
+                                         1, [], 0, [], Q)
 
+def get_SARIMA_model_data(series_length, s, PHI_terms, D, THETA_terms, Q):
+    '''
+    '''
+    return get_ARIMA_x_SARIMA_model_data(series_length, [], 0, [],
+                                         s, PHI_terms, D, THETA_terms, Q)
+
+def get_ARIMA_x_SARIMA_model_data(series_length, phi_terms, d, theta_terms,
+                                  s, PHI_terms, D, THETA_terms, Q):
+    '''
+    '''
+    full_phi_terms = model_product(phi_terms, s, PHI_terms)
+    full_theta_terms = model_product(theta_terms, s, THETA_terms)
+    r = max(len(full_phi_terms), len(full_theta_terms)+1)
+
+    difference_length = d + s * D
+    state_length = difference_length + r
     H = zeros((1,1))
     d_term = zeros((1,1))
-    Z = zeros((1,d+r))
-    Z[0,:(d+1)] = 1
+    Z = zeros((1,state_length))
 
     phi_r = zeros(r)
-    phi_r[:len(phi_terms)] = phi_terms
+    phi_r[:len(full_phi_terms)] = full_phi_terms
     theta_r = zeros(r)
     theta_r[0] = 1
-    theta_r[1:(len(theta_terms)+1)] = theta_terms
+    theta_r[1:(len(full_theta_terms)+1)] = full_theta_terms
 
-    T = zeros((d+r,d+r))
-    for idx in range(d):
-        T[idx,idx:(d+1)] = 1
-    T[d:,d] = phi_r
+    T = zeros((state_length,state_length))
+
+    difference_terms = zeros(state_length)
+    difference_terms[difference_length] = 1
+    for idx in range(D):
+        colidx = difference_length - s * idx - 1
+        difference_terms[colidx] = 1
+        for lag in range(s - 1):
+            T[colidx, colidx - 1] = 1
+            colidx -= 1
+        T[colidx,:] = difference_terms.copy()
+    for idx in reversed(range(d)):
+        difference_terms[idx] = 1
+        T[idx,:] = difference_terms.copy()
+
+    T[difference_length:,difference_length] = phi_r
     for idx in range(1, r):
-        T[d+idx-1, d+idx] = 1
-    c = zeros((d+r,1))
-    R = zeros((d+r,1))
-    R[d:,0] = theta_r
+        T[difference_length+idx-1, difference_length+idx] = 1
+    c = zeros((state_length,1))
+    R = zeros((state_length,1))
+    R[difference_length:,0] = theta_r
     Q = full((1,1), Q)
+
+    Z[0,:] = difference_terms.copy()
 
     result = get_static_model_df(series_length, Z=Z, d=d_term, H=H, T=T, c=c, R=R, Q=Q)
     return result

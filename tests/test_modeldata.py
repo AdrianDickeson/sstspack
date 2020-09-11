@@ -295,6 +295,75 @@ class Test_modeldata(unittest.TestCase):
         assert_array_equal(data_df.loc[0, 'R'], R)
         assert_array_equal(data_df.loc[0, 'Q'], Q)
 
+    def test_get_SARIMA_model_data(self):
+        s = 4
+        PHI_terms = [0.8]
+        D = 2
+        THETA_terms = []
+        Q = full((1,1), 0.75)
+
+        data_df = md.get_SARIMA_model_data(self.short_model_rows, s, PHI_terms, D, THETA_terms, Q)
+
+        expected_Z = zeros((1,12))
+        expected_Z[0,3] = expected_Z[0,7] = expected_Z[0,8] = 1 
+        assert_array_equal(data_df.Z[0], expected_Z)
+        assert_array_equal(data_df.loc[0, 'd'], zeros((1,1)))
+        assert_array_equal(data_df.loc[0, 'H'], zeros((1,1)))
+
+        expected_T = zeros((12,12))
+        expected_T[0,:] = expected_Z
+        expected_T[1,0] = expected_T[2,1] = expected_T[3,2] = 1
+        expected_T[4,4:] = expected_Z[0,4:]
+        expected_T[5,4] = expected_T[6,5] = expected_T[7,6] = 1
+        expected_T[11,8] = 0.8
+        expected_T[8,9] = expected_T[9,10] = expected_T[10,11] = 1
+        expected_R = zeros((12,1))
+        expected_R[8,0] = 1
+        assert_array_equal(data_df.loc[0, 'T'], expected_T)
+        assert_array_equal(data_df.c[0], zeros((12,1)))
+        assert_array_equal(data_df.R[0], expected_R)
+        assert_array_equal(data_df.Q[0], Q)
+
+    def test_get_ARIMA_x_SARIMA_model_data(self):
+        phi_terms = [0.25, -0.25]
+        d = 1
+        theta_terms = [0.4]
+        s = 4
+        PHI_terms = [0.8]
+        D = 2
+        THETA_terms = []
+        Q = full((1,1), 0.75)
+
+        data_df = md.get_ARIMA_x_SARIMA_model_data(self.short_model_rows, phi_terms, d, theta_terms,
+                                                 s, PHI_terms, D, THETA_terms, Q)
+
+        expected_Z = zeros((1,15))
+        expected_Z[0,0] = expected_Z[0,4] = expected_Z[0,8] = expected_Z[0,9] = 1 
+        assert_array_equal(data_df.Z[0], expected_Z)
+        assert_array_equal(data_df.loc[0, 'd'], zeros((1,1)))
+        assert_array_equal(data_df.loc[0, 'H'], zeros((1,1)))
+
+        expected_T = zeros((15,15))
+        expected_T[0,:] = expected_Z
+        expected_T[1,1:] = expected_Z[0,1:]
+        expected_T[2,1] = expected_T[3,2] = expected_T[4,3] = 1
+        expected_T[5,5:] = expected_Z[0,5:]
+        expected_T[6,5] = expected_T[7,6] = expected_T[8,7] = 1
+        expected_T[9,9] = 0.25
+        expected_T[10,9] = -0.25
+        expected_T[12,9] = 0.8
+        expected_T[13,9] = 0.2
+        expected_T[14,9] = -0.2
+        expected_T[9,10] = expected_T[10,11] = expected_T[11,12] = expected_T[12,13] =\
+            expected_T[13,14] = 1
+        expected_R = zeros((15,1))
+        expected_R[9,0] = 1
+        expected_R[10,0] = 0.4
+        assert_array_equal(data_df.loc[0, 'T'], expected_T)
+        assert_array_equal(data_df.c[0], zeros((15,1)))
+        assert_array_equal(data_df.R[0], expected_R)
+        assert_array_equal(data_df.Q[0], Q)
+
     def test_observation_terms(self):
         Z_input = ones((1,1))
         H_input = 5
