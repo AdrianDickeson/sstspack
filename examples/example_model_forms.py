@@ -38,8 +38,8 @@ if __name__ == '__main__':
     a0 = zeros((2,1))
     P0 = identity(2)
     H = 100
-    Q = 0.01 * identity(2)
-    local_linear_trend_df = md.get_local_linear_trend_model_data(100, Q, H)
+    Q_level = 0.01 * identity(2)
+    local_linear_trend_df = md.get_local_linear_trend_model_data(100, Q_level, H)
     local_linear_trend_sim = SSM.simulate_model(local_linear_trend_df, a0, P0)
 
     plot_sim(local_linear_trend_sim, 'Local linear trend model', 1, local_linear_trend_df)
@@ -82,10 +82,10 @@ if __name__ == '__main__':
 
     a0 = zeros((1,1))
     P0 = identity(1)
-    Q = 1
+    Q_level = 1
     phi_terms = [0.9]
     theta_terms = []
-    ARMA_df = md.get_ARMA_model_data(100, phi_terms, theta_terms, Q)
+    ARMA_df = md.get_ARMA_model_data(100, phi_terms, theta_terms, Q_level)
     ARMA_sim = SSM.simulate_model(ARMA_df, a0, P0)
 
     plot_sim(ARMA_sim, 'ARMA model', 0, ARMA_df)
@@ -94,7 +94,7 @@ if __name__ == '__main__':
     phi_terms = [0.4]
     a0 = zeros((3,1))
     P0 = identity(3)
-    ARIMA_df = md.get_ARIMA_model_data(100, phi_terms, 2, theta_terms, Q)
+    ARIMA_df = md.get_ARIMA_model_data(100, phi_terms, 2, theta_terms, Q_level)
     ARIMA_sim = SSM.simulate_model(ARIMA_df, a0, P0)
 
     plot_sim(ARIMA_sim, 'ARIMA model', 1, ARIMA_df)
@@ -103,7 +103,7 @@ if __name__ == '__main__':
     a0 = zeros((s,1))
     a0[:,0] = [-5*(i - 0.5*s) for i in range(s)]
     P0 = identity(s)
-    SARMA_df = md.get_SARMA_model_data(100, s, phi_terms, theta_terms, Q)
+    SARMA_df = md.get_SARMA_model_data(100, s, phi_terms, theta_terms, Q_level)
     SARMA_sim = SSM.simulate_model(SARMA_df, a0, P0)
 
     plot_sim(SARMA_sim, 'SARMA model', 0, SARMA_df)
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     a0[:,0] = [-5*(i - 0.5*s) for i in range(s+1)]
     P0 = identity(s+1)
     ARMA_x_SARMA_df = md.get_ARMA_x_SARMA_model_data(100, phi_terms, theta_terms,
-                                                     s, phi_terms, theta_terms, Q)
+                                                     s, phi_terms, theta_terms, Q_level)
     ARMA_x_SARMA_sim = SSM.simulate_model(ARMA_x_SARMA_df, a0, P0)
 
     plot_sim(ARMA_x_SARMA_sim, 'ARMA x SARMA model', 0, ARMA_x_SARMA_df)
@@ -123,7 +123,7 @@ if __name__ == '__main__':
     a0 = zeros((2*s,1))
     a0[:,0] = [-5*(i - 0.5*s) for i in range(2*s)]
     P0 = identity(2*s)
-    SARIMA_df = md.get_SARIMA_model_data(100, s, phi_terms, D, theta_terms, Q)
+    SARIMA_df = md.get_SARIMA_model_data(100, s, phi_terms, D, theta_terms, Q_level)
     SARIMA_sim = SSM.simulate_model(SARIMA_df, a0, P0)
 
     plot_sim(SARIMA_sim, 'SARIMA model', 0, SARIMA_df)
@@ -134,7 +134,7 @@ if __name__ == '__main__':
     a0[:,0] = [-5*(i - 0.5*s) for i in range(2 * s+2)]
     P0 = identity(2 * s+2)
     ARIMA_x_SARIMA_df = md.get_ARIMA_x_SARIMA_model_data(100, phi_terms, d, theta_terms,
-                                                         s, phi_terms, D, theta_terms, Q)
+                                                         s, phi_terms, D, theta_terms, Q_level)
     ARIMA_x_SARIMA_sim = SSM.simulate_model(ARIMA_x_SARIMA_df, a0, P0)
 
     plot_sim(ARIMA_x_SARIMA_sim, 'ARIMA x SARiMA model', 0, ARIMA_x_SARIMA_df)

@@ -4,13 +4,15 @@ Created on 26 Aug 2017
 @author: adriandickeson
 '''
 
-from numpy import dot, zeros, ravel, log, pi as PI, identity, array, isnan, inf, sum
+from numpy import dot, zeros, ravel, log, pi as PI, identity, array, isnan, inf, sum, abs
 from numpy.linalg import inv, det, LinAlgError
 from numpy.random import multivariate_normal as mv_norm
 import pandas as pd
 from _sqlite3 import Row
 
 pd.options.mode.chained_assignment = None  # default='warn'
+
+EPSILON = 1e-14
 
 class StateSpaceModel(object):
     '''
@@ -39,7 +41,8 @@ class StateSpaceModel(object):
                                                         self.model_data_df.columns.tolist()
                                                         + estimation_columns)
         self.model_data_df[estimation_columns] = pd.NA
-        self.p = [self.Z[key].shape[0] for key in self.index]
+        self.p = pd.Series(data=[self.Z[key].shape[0] for key in self.index],
+                           index=self.model_data_df.index)
 
         self.set_up_initial_terms(a_prior_initial, P_prior_initial, diffuse_states)
 
@@ -170,7 +173,7 @@ class StateSpaceModel(object):
                 self.P_posterior[key] = self.diffuse_P(self.P_star_posterior[key],\
                                                        self.P_infinity_posterior[key])
 
-                if all(ravel(self.P_infinity_posterior[key] == 0)):
+                if all(abs(ravel(self.P_infinity_posterior[key]) <= EPSILON)):
                     self.d_diffuse = index
             else:
                 PZ = dot(self.P_prior[key], self.Z[key].T)
@@ -536,5 +539,5 @@ class StateSpaceModel(object):
         '''
         '''
         result = P_star.copy()
-        result[P_infinity != 0] = inf
+        result[abs(P_infinity) > EPSILON] = inf
         return result

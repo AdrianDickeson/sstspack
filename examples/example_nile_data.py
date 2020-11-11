@@ -17,8 +17,7 @@ if __name__ == '__main__':
     H = 15099
     sigma2_eta = 1469.1
 
-    model_df = md.get_local_level_model_data(len(nile_data), sigma2_eta, H)
-    model_df.index = nile_data.index
+    model_df = md.get_local_level_model_data(nile_data.index, sigma2_eta, H)
     a0 = full((1,1), 0)
     P0 = full((1,1), 10 ** 7)
 
@@ -34,8 +33,7 @@ if __name__ == '__main__':
 
     forecast_data = pd.Series([pd.NA]*30, index=range(1971,2001))
     forecast_nile_data = nile_data.append(forecast_data)
-    model_df = md.get_local_level_model_data(len(forecast_nile_data), sigma2_eta, H)
-    model_df.index = forecast_nile_data.index
+    model_df = md.get_local_level_model_data(forecast_nile_data.index, sigma2_eta, H)
     forecast_ssm = SSM(forecast_nile_data, model_df, a0, P0)
     forecast_ssm.filter()
 

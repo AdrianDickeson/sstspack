@@ -10,9 +10,9 @@ import pandas as pd
 
 from sstspack import StateSpaceModel as SSM, modeldata as md
 
-def get_model_and_sim(y, Q, H):
+def get_model_and_sim(y, Q_level, H):
     length = len(y)
-    data_df = md.get_local_level_model_data(length, Q, H)
+    data_df = md.get_local_level_model_data(length, Q_level, H)
     ssm = SSM(y, data_df, np.zeros((1,1)), np.ones((1,1)))
     ssm.filter()
     ssm.smoother()
@@ -40,16 +40,16 @@ if __name__ == '__main__':
     epsilon = y - alpha
     eta = np.array(alpha)[1:] - np.array(alpha)[:-1]
     H = np.array([[0.1 ** 2, 0.], [0., 0.2 ** 2]])
-    Q = np.std(eta) ** 2
+    Q_level = np.std(eta) ** 2
 
-    ssm, sim = get_model_and_sim(y, Q, H)
+    ssm, sim = get_model_and_sim(y, Q_level, H)
     plot_sim(data, ssm, sim, 'Complete Data')
 
     data['Observed 1'][21:40] = pd.NA
     data['Observed 2'][31:50] = pd.NA
     y = data.apply(lambda x: np.array([[x['Observed 1']], [x['Observed 2']]]), axis=1)
 
-    ssm, sim = get_model_and_sim(y, Q, H)
+    ssm, sim = get_model_and_sim(y, Q_level, H)
     plot_sim(data, ssm, sim, 'Missing Data')
 
     plt.show()
