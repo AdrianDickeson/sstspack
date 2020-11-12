@@ -11,7 +11,7 @@ import pandas as pd
 from numpy import array, zeros, ones, full, identity, hstack, dot, ravel, inf
 import matplotlib.pyplot as plt
 
-from sstspack import StateSpaceModel as SSM
+from sstspack import LinearGaussianModel as LGM
 import sstspack.modeldata as md
 import sstspack.fitting as fit
 
@@ -70,7 +70,7 @@ if __name__ == '__main__':
     P0 = identity(12)
     diffuse_states = [True] * 12
 
-    model = SSM(y_series, model_data, a0, P0, diffuse_states)
+    model = LGM(y_series, model_data, a0, P0, diffuse_states)
     model.disturbance_smoother()
 
     plot_figs.plot_fig82(model)
@@ -92,7 +92,7 @@ if __name__ == '__main__':
     P0[13,13] = 0
     diffuse_states = [True] * 12 + [False] * 2
 
-    model = SSM(y_series, model_data, a0, P0, diffuse_states)
+    model = LGM(y_series, model_data, a0, P0, diffuse_states)
     model.disturbance_smoother()
 
     plot_figs.plot_fig85(model)
@@ -122,7 +122,7 @@ if __name__ == '__main__':
     a0[-3] = -0.29140
     P0 = zeros((state_len, state_len))
     diffuse_states = [True] * (state_len - 6) + [False] * 6
-    model = SSM(y_series, model_data, a0, P0, diffuse_states)
+    model = LGM(y_series, model_data, a0, P0, diffuse_states)
     model.disturbance_smoother()
 
     plot_figs.plot_fig87(model)

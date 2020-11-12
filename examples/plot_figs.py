@@ -9,7 +9,7 @@ from numpy import sqrt, linspace, array, hstack, dot, ravel
 from scipy.stats import norm, gaussian_kde
 from numpy.random import normal
 
-from sstspack import StateSpaceModel as SSM
+from sstspack import LinearGaussianModel as LGM
 
 NILE_DATA_TITLE = 'Volume of Nile river at Aswan 1871-1970'
 SEATBELT_DATA_TITLE = 'Great Britain Road Accident Casulaties 1969-1984'
@@ -241,10 +241,10 @@ def plot_fig24(ssmodel, sim):
     initial_key = sim.index[0]
     a0 = ssmodel.a_hat[initial_key]
     P0 = ssmodel.V[initial_key]
-    model_fields = ['Z', 'd', 'H', 'T', 'c', 'R', 'Q_level']
+    model_fields = ['Z', 'd', 'H', 'T', 'c', 'R', 'Q']
     model_df = ssmodel.model_data_df[model_fields].copy()
-    new_sim = SSM.simulate_model(model_df, a0, P0)
-    plot_ssm = SSM(new_sim.y, model_df, a0, P0)
+    new_sim = LGM.simulate_model(model_df, a0, P0)
+    plot_ssm = LGM(new_sim.y, model_df, a0, P0)
     plot_ssm.smoother()
     plot_sim = sim.alpha - ssmodel.a_hat + plot_ssm.a_hat
 
@@ -273,7 +273,7 @@ def plot_fig24(ssmodel, sim):
 def plot_fig25(ssmodel):
     '''
     '''
-    missing_mask = ssmodel.y.apply(lambda x: not SSM.is_all_missing(x))
+    missing_mask = ssmodel.y.apply(lambda x: not LGM.is_all_missing(x))
     state_data_df = get_fig_data(ssmodel, 'a_prior', 'P_prior')
 
     fig, axs = plt.subplots(2, 2)
@@ -299,7 +299,7 @@ def plot_fig25(ssmodel):
 def plot_fig26(ssmodel):
     '''
     '''
-    missing_mask = ssmodel.y.apply(lambda x: not SSM.is_all_missing(x))
+    missing_mask = ssmodel.y.apply(lambda x: not LGM.is_all_missing(x))
     state_data_df = get_fig_data(ssmodel, 'a_prior', 'P_prior', confidence = 0.5)
 
     fig, axs = plt.subplots(2, 2)
@@ -400,12 +400,12 @@ def run_diagnostics(ssmodel):
 
     q = 9
     q_dict = {i: auto_correlation(forecast_errors, i) for i in range(1,q+1)}
-    Q_level = n * (n + 2) * sum([q_dict[i] ** 2 / (n - i) for i in range(1,q+1)])
+    Q = n * (n + 2) * sum([q_dict[i] ** 2 / (n - i) for i in range(1,q+1)])
 
     print('Diagnostic checks')
     print('=================\n')
-    print('S: {:.2f}, K: {:.2f}, N: {:.2f}, H({}): {:.2f}, Q_level({}): {:.2f}'.format(S, K, N, h,
-                                                                                 H, q, Q_level))
+    print('S: {:.2f}, K: {:.2f}, N: {:.2f}, H({}): {:.2f}, Q({}): {:.2f}'.format(S, K, N, h,
+                                                                                 H, q, Q))
 
 def plot_fig81(seatbelt_df):
     '''

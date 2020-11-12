@@ -14,9 +14,9 @@ pd.options.mode.chained_assignment = None  # default='warn'
 
 EPSILON = 1e-14
 
-class StateSpaceModel(object):
+class LinearGaussianModel(object):
     '''
-    The StateSpaceModel object based on the user provided parameters.
+    The LinearGaussianModel object based on the user provided parameters.
 
     Parameters
     ----------
@@ -378,7 +378,7 @@ class StateSpaceModel(object):
         for key in self.index:
             sim_df.loc[key,'y'] = self.copy_missing(sim_df.loc[key,'y'], self.y[key])
 
-        sim_ssm = StateSpaceModel(sim_df['y'], model_data_df, a0, P0)
+        sim_ssm = LinearGaussianModel(sim_df['y'], model_data_df, a0, P0)
         sim_ssm.disturbance_smoother()
 
         sim_series_names = ['alpha', 'epsilon', 'eta']
@@ -445,7 +445,7 @@ class StateSpaceModel(object):
              pass
 
         try:
-            if all([StateSpaceModel.is_all_missing(val) for val in value]):
+            if all([LinearGaussianModel.is_all_missing(val) for val in value]):
                 return True
         except TypeError:
             pass
@@ -457,7 +457,7 @@ class StateSpaceModel(object):
         '''
         '''
         try:
-            if any([StateSpaceModel.is_all_missing(val) for val in value]):
+            if any([LinearGaussianModel.is_all_missing(val) for val in value]):
                 return True
         except TypeError:
             pass
@@ -468,7 +468,7 @@ class StateSpaceModel(object):
     def remove_missing_rows(value, ref):
         '''
         '''
-        not_missing_mask = [not StateSpaceModel.is_all_missing(val) for val in ref]
+        not_missing_mask = [not LinearGaussianModel.is_all_missing(val) for val in ref]
         result = array(value)
         if len(result.shape) == 2:
             return result[not_missing_mask,:]
@@ -480,13 +480,13 @@ class StateSpaceModel(object):
         '''
         try:
             for index, val in enumerate(ref):
-                if StateSpaceModel.is_all_missing(val):
+                if LinearGaussianModel.is_all_missing(val):
                     try:
                         value[index][0] = pd.NA
                     except TypeError:
                         value[index] = pd.NA
         except TypeError:
-            if StateSpaceModel.is_all_missing(ref):
+            if LinearGaussianModel.is_all_missing(ref):
                 value = pd.NA
 
         return value

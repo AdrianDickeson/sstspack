@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from sstspack import StateSpaceModel as SSM, modeldata as md
+from sstspack import LinearGaussianModel as LGM, modeldata as md
 
 pd.set_option('display.max_columns', 100)
 
@@ -32,10 +32,10 @@ if __name__ == '__main__':
     y[32:34] = [[[pd.NA]],[[pd.NA]]]
     y[34:36] = [[[np.nan]],[[np.nan]]]
     y[36:38] = [[[None]],[[None]]]
-    non_missing_mask = [not SSM.is_all_missing(value) for value in y]
+    non_missing_mask = [not LGM.is_all_missing(value) for value in y]
 
     data_df = md.get_local_level_model_data(100, sigma2_eta, H)
-    ssm = SSM(data['Observed'], data_df, np.array([0.]), np.array([[1.]]))
+    ssm = LGM(data['Observed'], data_df, np.array([0.]), np.array([[1.]]))
     ssm.filter()
     ssm.smoother()
     ssm.disturbance_smoother()

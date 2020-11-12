@@ -10,10 +10,10 @@ import numpy as np
 import pandas as pd
 from numpy.testing import assert_array_equal
 
-from sstspack import StateSpaceModel as SSM, modeldata as md
+from sstspack import LinearGaussianModel as LGM, modeldata as md
 
 
-class TestStateSpaceModel(unittest.TestCase):
+class TestLinearGaussianModel(unittest.TestCase):
 
 
     def SetupLocalModel(self, series_length, sigma2_eta, H):
@@ -26,10 +26,10 @@ class TestStateSpaceModel(unittest.TestCase):
         self.Y = Y_data['Observed']
 
     def GetLocalModel(self):
-        return SSM(self.Y, self.local_model_data, self.a0, self.P0)
+        return LGM(self.Y, self.local_model_data, self.a0, self.P0)
 
     def GetDiffuseLocalModel(self):
-        return SSM(self.Y, self.local_model_data, self.a0, self.P0, [True])
+        return LGM(self.Y, self.local_model_data, self.a0, self.P0, [True])
 
     def setUp(self):
         # Setup local-level mpdel
@@ -91,7 +91,7 @@ class TestStateSpaceModel(unittest.TestCase):
 
 
     def test_simulate_model(self):
-        SSM.simulate_model(self.local_model_data, self.a0, self.P0)
+        LGM.simulate_model(self.local_model_data, self.a0, self.P0)
 
     def test_log_likelihood(self):
         local_model = self.GetLocalModel()
@@ -104,7 +104,7 @@ class TestStateSpaceModel(unittest.TestCase):
 
         missing_y = self.Y.copy()
         missing_y[20:30] = None
-        local_model = SSM(missing_y, self.local_model_data, self.a0, self.P0)
+        local_model = LGM(missing_y, self.local_model_data, self.a0, self.P0)
         log_lik = local_model.log_likelihood()
         self.assertAlmostEqual(log_lik, 28.047420202120488)
 
@@ -124,51 +124,51 @@ class TestStateSpaceModel(unittest.TestCase):
         self.assertAlmostEqual(local_model.eta_hat_sigma2[0].ravel()[0], 0.0017433030277982336)
 
     def test_is_all_missing(self):
-        self.assertFalse(SSM.is_all_missing(0))
-        self.assertTrue(SSM.is_all_missing(pd.NA))
-        self.assertTrue(SSM.is_all_missing(None))
-        self.assertTrue(SSM.is_all_missing(np.nan))
-        self.assertTrue(SSM.is_all_missing(np.NaN))
-        self.assertTrue(SSM.is_all_missing(np.NAN))
-        self.assertFalse(SSM.is_all_missing([0]))
-        self.assertFalse(SSM.is_all_missing([0, 0]))
-        self.assertFalse(SSM.is_all_missing([0, pd.NA]))
-        self.assertTrue(SSM.is_all_missing([pd.NA]))
-        self.assertTrue(SSM.is_all_missing([pd.NA, pd.NA]))
-        self.assertFalse(SSM.is_all_missing([[0]]))
-        self.assertFalse(SSM.is_all_missing([[0], [0]]))
-        self.assertFalse(SSM.is_all_missing([[0], [pd.NA]]))
-        self.assertTrue(SSM.is_all_missing([[pd.NA]]))
-        self.assertTrue(SSM.is_all_missing([[pd.NA], [pd.NA]]))
+        self.assertFalse(LGM.is_all_missing(0))
+        self.assertTrue(LGM.is_all_missing(pd.NA))
+        self.assertTrue(LGM.is_all_missing(None))
+        self.assertTrue(LGM.is_all_missing(np.nan))
+        self.assertTrue(LGM.is_all_missing(np.NaN))
+        self.assertTrue(LGM.is_all_missing(np.NAN))
+        self.assertFalse(LGM.is_all_missing([0]))
+        self.assertFalse(LGM.is_all_missing([0, 0]))
+        self.assertFalse(LGM.is_all_missing([0, pd.NA]))
+        self.assertTrue(LGM.is_all_missing([pd.NA]))
+        self.assertTrue(LGM.is_all_missing([pd.NA, pd.NA]))
+        self.assertFalse(LGM.is_all_missing([[0]]))
+        self.assertFalse(LGM.is_all_missing([[0], [0]]))
+        self.assertFalse(LGM.is_all_missing([[0], [pd.NA]]))
+        self.assertTrue(LGM.is_all_missing([[pd.NA]]))
+        self.assertTrue(LGM.is_all_missing([[pd.NA], [pd.NA]]))
  
     def test_is_partial_missing(self):
-        self.assertFalse(SSM.is_partial_missing(0))
-        self.assertFalse(SSM.is_partial_missing(pd.NA))
-        self.assertFalse(SSM.is_partial_missing([0,0]))
-        self.assertTrue(SSM.is_partial_missing([0,pd.NA]))
-        self.assertFalse(SSM.is_partial_missing([[0],[0]]))
-        self.assertTrue(SSM.is_partial_missing([[0],[pd.NA]]))
+        self.assertFalse(LGM.is_partial_missing(0))
+        self.assertFalse(LGM.is_partial_missing(pd.NA))
+        self.assertFalse(LGM.is_partial_missing([0,0]))
+        self.assertTrue(LGM.is_partial_missing([0,pd.NA]))
+        self.assertFalse(LGM.is_partial_missing([[0],[0]]))
+        self.assertTrue(LGM.is_partial_missing([[0],[pd.NA]]))
 
     def test_remove_missing_rows(self):
-        assert_array_equal(SSM.remove_missing_rows([[1,0],[0,1]], [1,pd.NA]), [[1,0]])
-        assert_array_equal(SSM.remove_missing_rows([[1,0],[0,1]], [[1],[pd.NA]]), [[1,0]])
-        self.assertEqual(SSM.remove_missing_rows([1,pd.NA], [1,pd.NA]), [1])
-        self.assertEqual(SSM.remove_missing_rows([[1],[pd.NA]], [[1],[pd.NA]]), [[1]])
+        assert_array_equal(LGM.remove_missing_rows([[1,0],[0,1]], [1,pd.NA]), [[1,0]])
+        assert_array_equal(LGM.remove_missing_rows([[1,0],[0,1]], [[1],[pd.NA]]), [[1,0]])
+        self.assertEqual(LGM.remove_missing_rows([1,pd.NA], [1,pd.NA]), [1])
+        self.assertEqual(LGM.remove_missing_rows([[1],[pd.NA]], [[1],[pd.NA]]), [[1]])
 
     def test_copy_missing(self):
-        assert_array_equal(SSM.copy_missing([[0],[0]], [[1],[1]]), [[0],[0]])
-        assert_array_equal(np.array(SSM.copy_missing([[0],[0]], [[1],[pd.NA]])).shape, (2,1))
-        self.assertEqual(SSM.copy_missing([[0],[0]], [[1],[pd.NA]])[0][0], 0)
-        assert SSM.copy_missing([[0],[0]], [[1],[pd.NA]])[1][0] is pd.NA
-        assert_array_equal(SSM.copy_missing([0,0], [1,1]), [0,0])
-        assert_array_equal(np.array(SSM.copy_missing([0,0], [1,pd.NA])).shape, (2,))
-        self.assertEqual(SSM.copy_missing([0,0], [1,pd.NA])[0], 0)
-        assert SSM.copy_missing([0,0], [1,pd.NA])[1] is pd.NA
-        assert_array_equal(SSM.copy_missing([0], [1]), [0])
-        assert_array_equal(np.array(SSM.copy_missing([0], [pd.NA])).shape, (1,))
-        assert SSM.copy_missing([0], [pd.NA])[0] is pd.NA
-        self.assertEqual(SSM.copy_missing(0, 1), 0)
-        assert SSM.copy_missing(0, pd.NA) is pd.NA
+        assert_array_equal(LGM.copy_missing([[0],[0]], [[1],[1]]), [[0],[0]])
+        assert_array_equal(np.array(LGM.copy_missing([[0],[0]], [[1],[pd.NA]])).shape, (2,1))
+        self.assertEqual(LGM.copy_missing([[0],[0]], [[1],[pd.NA]])[0][0], 0)
+        assert LGM.copy_missing([[0],[0]], [[1],[pd.NA]])[1][0] is pd.NA
+        assert_array_equal(LGM.copy_missing([0,0], [1,1]), [0,0])
+        assert_array_equal(np.array(LGM.copy_missing([0,0], [1,pd.NA])).shape, (2,))
+        self.assertEqual(LGM.copy_missing([0,0], [1,pd.NA])[0], 0)
+        assert LGM.copy_missing([0,0], [1,pd.NA])[1] is pd.NA
+        assert_array_equal(LGM.copy_missing([0], [1]), [0])
+        assert_array_equal(np.array(LGM.copy_missing([0], [pd.NA])).shape, (1,))
+        assert LGM.copy_missing([0], [pd.NA])[0] is pd.NA
+        self.assertEqual(LGM.copy_missing(0, 1), 0)
+        assert LGM.copy_missing(0, pd.NA) is pd.NA
 
     def test_adapt_row_to_any_missing_data(self):
         y_val = 2
@@ -183,17 +183,17 @@ class TestStateSpaceModel(unittest.TestCase):
         a0 = np.zeros((1,1))
         P0 = np.ones((1,1))
 
-        ssm_data_uv = SSM(y_data_uv, model_uv, a0, P0)
+        ssm_data_uv = LGM(y_data_uv, model_uv, a0, P0)
         ssm_data_uv.adapt_row_to_any_missing_data(0)
         assert_array_equal(ssm_data_uv.Z[0], np.ones((1,1)))
         assert_array_equal(ssm_data_uv.v[0], np.full((1,1), y_val))
 
-        ssm_missing_uv = SSM(y_missing_uv, model_uv, a0, P0)
+        ssm_missing_uv = LGM(y_missing_uv, model_uv, a0, P0)
         ssm_missing_uv.adapt_row_to_any_missing_data(0)
         assert_array_equal(ssm_missing_uv.Z[0], np.zeros((1,1)))
         assert_array_equal(ssm_missing_uv.v[0], np.zeros((1,1)))
 
-        ssm_missing_mv = SSM(y_missing_mv, model_mv, a0, P0)
+        ssm_missing_mv = LGM(y_missing_mv, model_mv, a0, P0)
         ssm_missing_mv.adapt_row_to_any_missing_data(0)
         assert_array_equal(ssm_missing_mv.Z[0], np.ones((1,1)))
         assert_array_equal(ssm_missing_mv.d[0], np.zeros((1,1)))
@@ -206,7 +206,7 @@ class TestStateSpaceModel(unittest.TestCase):
         model = md.get_local_level_model_data(1, 1, 1)
         a0 = np.zeros((1,1))
         P0 = np.ones((1,1))
-        ssm_data = SSM(y_data, model, a0, P0)
+        ssm_data = LGM(y_data, model, a0, P0)
 
         a0 = 3 * np.ones((3,1))
         P0 = 2 * np.identity(3)
@@ -275,7 +275,7 @@ class TestStateSpaceModel(unittest.TestCase):
         a0 = np.zeros((1,1))
         P0 = np.ones((1,1))
 
-        ssm_data = SSM(y_data, model_data, a0, P0)
+        ssm_data = LGM(y_data, model_data, a0, P0)
         ssm_data.filter()
         assert_array_equal(ssm_data.v[0], np.ones((1,1)))
         assert_array_equal(ssm_data.F[0], np.full((1,1), 2))
@@ -285,7 +285,7 @@ class TestStateSpaceModel(unittest.TestCase):
         assert_array_equal(ssm_data.a_prior_final, np.full((1,1), 0.5))
         assert_array_equal(ssm_data.P_prior_final, np.full((1,1), 1.5))
 
-        ssm_data = SSM(y_missing, model_data, a0, P0)
+        ssm_data = LGM(y_missing, model_data, a0, P0)
         ssm_data.filter()
         assert_array_equal(ssm_data.v[0], np.zeros((1,1)))
         assert_array_equal(ssm_data.F[0], np.full((1,1), 2))
@@ -295,7 +295,7 @@ class TestStateSpaceModel(unittest.TestCase):
         assert_array_equal(ssm_data.a_prior_final, np.full((1,1), 0))
         assert_array_equal(ssm_data.P_prior_final, np.full((1,1), 2))
 
-        ssm_data = SSM(y_data, model_data, a0, P0, [True])
+        ssm_data = LGM(y_data, model_data, a0, P0, [True])
         ssm_data.filter()
         assert_array_equal(ssm_data.v[0], np.ones((1,1)))
         assert_array_equal(ssm_data.F[0].shape, (1,1))
@@ -321,7 +321,7 @@ class TestStateSpaceModel(unittest.TestCase):
         assert_array_equal(ssm_data.P_prior_final, np.full((1,1), 2))
         self.assertEqual(ssm_data.d_diffuse, 0)
 
-        ssm_data = SSM(y_missing, model_data, a0, P0, [True])
+        ssm_data = LGM(y_missing, model_data, a0, P0, [True])
         ssm_data.filter()
         assert_array_equal(ssm_data.a_prior[0], np.zeros((1,1)))
         assert_array_equal(ssm_data.P_infinity_prior[0], np.ones((1,1)))
@@ -345,17 +345,17 @@ class TestStateSpaceModel(unittest.TestCase):
 
     def test_diffuse_P(self):
         P_star = np.full((1,1), 2.)
-        result = SSM.diffuse_P(P_star, np.zeros((1,1)))
+        result = LGM.diffuse_P(P_star, np.zeros((1,1)))
         assert_array_equal(result, P_star)
 
-        result = SSM.diffuse_P(P_star, np.ones((1,1)))
+        result = LGM.diffuse_P(P_star, np.ones((1,1)))
         assert_array_equal(result.shape, (1,1))
         self.assertTrue(np.isinf(result[0,0]))
 
         P_star = np.identity(2)
         P_star[1,1] = 0
         P_infinity = np.identity(2)
-        result = SSM.diffuse_P(P_star, P_infinity)
+        result = LGM.diffuse_P(P_star, P_infinity)
         self.assertTrue(np.isinf(result[0,0]))
         self.assertTrue(np.isinf(result[1,1]))
 

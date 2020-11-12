@@ -8,12 +8,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from sstspack import StateSpaceModel as SSM, modeldata as md
+from sstspack import LinearGaussianModel as LGM, modeldata as md
 
 def get_model_and_sim(y, Q_level, H):
     length = len(y)
     data_df = md.get_local_level_model_data(length, Q_level, H)
-    ssm = SSM(y, data_df, np.zeros((1,1)), np.ones((1,1)))
+    ssm = LGM(y, data_df, np.zeros((1,1)), np.ones((1,1)))
     ssm.filter()
     ssm.smoother()
     ssm.disturbance_smoother()
@@ -21,8 +21,8 @@ def get_model_and_sim(y, Q_level, H):
     return ssm, sim
 
 def plot_sim(data, ssm, sim, title):
-    non_missing_mask1 = [not SSM.is_all_missing(value) for value in data['Observed 1']]
-    non_missing_mask2 = [not SSM.is_all_missing(value) for value in data['Observed 2']]
+    non_missing_mask1 = [not LGM.is_all_missing(value) for value in data['Observed 1']]
+    non_missing_mask2 = [not LGM.is_all_missing(value) for value in data['Observed 2']]
 
     fig, ax = plt.subplots(1)
     ax.scatter(data.index[non_missing_mask1], data['Observed 1'][non_missing_mask1], marker='x')

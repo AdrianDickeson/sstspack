@@ -7,7 +7,7 @@ Created on 4 Sep 2020
 from numpy import exp, sqrt, isinf, log, array, zeros
 from scipy.optimize import minimize
 
-from sstspack.StateSpaceModelClass import StateSpaceModel as SSM
+from sstspack.StateSpaceModelClass import LinearGaussianModel as LGM
 
 def parameter_transform_function(parameter_bounds):
     '''
@@ -81,7 +81,7 @@ def fit_model_max_likelihood(params0, params_bounds, model_func, y_series,
 
     def inner_objective_func(params, y_series):
         model_data = model_func(params)
-        model = SSM(y_series, model_data, a0, P0, diffuse_state)
+        model = LGM(y_series, model_data, a0, P0, diffuse_state)
         return -model.log_likelihood()
 
     res = minimize(objective_func, initial_params, options={'disp': False},

@@ -1,1 +1,1 @@
-from sstspack.StateSpaceModelClass import StateSpaceModel
+from sstspack.LinearGaussianModelClass import LinearGaussianModel
