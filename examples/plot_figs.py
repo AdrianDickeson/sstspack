@@ -13,6 +13,7 @@ from sstspack import LinearGaussianModel as LGM
 
 NILE_DATA_TITLE = 'Volume of Nile river at Aswan 1871-1970'
 SEATBELT_DATA_TITLE = 'Great Britain Road Accident Casulaties 1969-1984'
+BOX_JENKINS_DATA_TITLE = 'Box-Jenkins modeling of internet user data'
 XLIM = (1868, 1973)
 XLABEL = 'year'
 FIG_LAYOUT = [0, 0.03, 1, 0.95]
@@ -590,3 +591,40 @@ def plot_fig87(model):
 
     fig.tight_layout(rect=FIG_LAYOUT)
     fig.savefig('figures/fig8.7.pdf')
+
+def plot_with_missing_data(data, ax):
+    '''
+    '''
+    start_idx = None
+    curr_idx = 0
+    data_idx_list = []
+    while curr_idx < len(data):
+        if start_idx is None and not data[curr_idx] is pd.NA:
+            start_idx = curr_idx
+        if data[curr_idx] is pd.NA and start_idx is not None:
+            data_idx_list.append(list(range(start_idx, curr_idx)))
+            start_idx = None
+        curr_idx += 1
+
+    for plot_range in data_idx_list:
+        ax.plot(plot_range, data[plot_range], '-b')
+
+def plot_fig88(data, missing_data):
+    '''
+    '''
+    fig, axs = plt.subplots(2,1)
+    fig.suptitle('{} - Fig. 8.8'.format(BOX_JENKINS_DATA_TITLE), fontsize=14)
+
+    ax = axs[0]
+    ax.plot(data)
+    ax.axhline(y=0, color='k', ls='--', alpha=0.75, lw=0.5)
+    ax.set_ylabel('Change')
+
+    ax = axs[1]
+    plot_with_missing_data(missing_data, ax)
+    ax.axhline(y=0, color='k', ls='--', alpha=0.75, lw=0.5)
+    ax.set_ylabel('Change')
+    ax.set_xlabel('Minutes')
+
+    fig.tight_layout(rect=FIG_LAYOUT)
+    fig.savefig('figures/fig8.8.pdf')

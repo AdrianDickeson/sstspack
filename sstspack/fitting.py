@@ -7,7 +7,7 @@ Created on 4 Sep 2020
 from numpy import exp, sqrt, isinf, log, array, zeros
 from scipy.optimize import minimize
 
-from sstspack.StateSpaceModelClass import LinearGaussianModel as LGM
+from sstspack import LinearGaussianModel as LGM
 
 def parameter_transform_function(parameter_bounds):
     '''
