@@ -1,4 +1,4 @@
-# State Space method for Time Series analysis PACKage (sstspapk)
+# State Space methods for Time Series analysis PACKage (sstspack)
 
 This is a simple example package. You can use
 [Github-flavored Markdown](https://guides.github.com/features/mastering-markdown/)
