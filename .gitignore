@@ -4,3 +4,4 @@ examples/__pycache__/
 .vscode/
 venv/
 example_pkg_YOUR_USERNAME_HERE.egg-info/
+*.pyc
