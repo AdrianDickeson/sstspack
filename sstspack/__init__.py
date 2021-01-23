@@ -1,1 +1,1 @@
-from sstspack.LinearGaussianModelClass import LinearGaussianModel
+from sstspack.DynamicLinearGaussianModelClass import DynamicLinearGaussianModel
