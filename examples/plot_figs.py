@@ -559,8 +559,12 @@ def plot_fig83(model):
 
 def plot_lines(data_series, ax):
     """"""
-    for value in data_series.index:
-        ax.plot((value, value), (0, data_series[value]), c="k")
+    for idx in data_series.index:
+        try:
+            value = data_series[idx][0, 0]
+        except:
+            value = data_series[idx]
+        ax.plot((idx, idx), (0, value), c="k")
 
 
 def plot_fig84(model, confidence=0.9):
