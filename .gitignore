@@ -1,4 +1,4 @@
-scratch.py
+scratch*.py
 sstspack/__pycache__/
 examples/__pycache__/
 .vscode/
