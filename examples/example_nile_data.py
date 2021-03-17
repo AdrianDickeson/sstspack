@@ -4,9 +4,16 @@ from numpy import full
 from sstspack import DynamicLinearGaussianModel as DLGM, modeldata as md
 import plot_figs as pf
 
-if __name__ == "__main__":
+
+def read_nile_data():
+    """"""
     nile_data = pd.read_csv("data/Nile.dat").iloc[:, 0]
     nile_data.index = range(1871, 1971)
+    return nile_data
+
+
+if __name__ == "__main__":
+    nile_data = read_nile_data()
 
     H = 15099
     sigma2_eta = 1469.1

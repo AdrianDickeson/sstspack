@@ -1,4 +1,4 @@
-from numpy import exp, sqrt, isinf, log, array, zeros, ravel
+from numpy import exp, sqrt, isinf, log, array, zeros, ravel, set_printoptions
 from numpy.linalg import inv
 from scipy.optimize import minimize
 
@@ -71,20 +71,45 @@ class FittedModel:
         )
 
     def __str__(self):
+        set_printoptions(precision=5)
+        warning = ""
+        if not self.success:
+            warning = "\nWarning: {}".format(self.message)
+        parameters = self.parameter_field_to_str(self.parameters)
+        jacobian = self.parameter_field_to_str(self.jacobian)
+
         result = """Maximum Likelihood Results
 --------------------------
-Maximum Log Likelihood Found: {:.5}
+Maximum Log Likelihood Found: {:.5}{}
 Parameters:
-""".format(
-            self.log_likelihood
+{}
+Jacobian:
+{}
+Variance Matrix
+{}""".format(
+            self.log_likelihood,
+            warning,
+            parameters,
+            jacobian,
+            self.fisher_information_matrix,
         )
-        parameters = "\n".join(
+
+        return result
+
+    def parameter_field_to_str(self, field_data):
+        """"""
+        parameter_names = self.parameter_names
+        if parameter_names is None:
+            parameter_names = [
+                "Parameter {}".format(idx) for idx in range(len(self.parameters))
+            ]
+
+        result = "\n".join(
             [
-                "Parameter {}: {:.6}".format(param[0], param[1])
-                for param in enumerate(ravel(self.parameters))
+                "{}: {:.6}".format(parameter_names[idx], field_data[idx])
+                for idx in range(len(self.parameters))
             ]
         )
-        result += parameters
         return result
 
 
@@ -97,6 +122,7 @@ def fit_model_max_likelihood(
     P0,
     diffuse_state,
     model_template=None,
+    parameter_names=None,
 ):
     """"""
     initial_params = [
@@ -155,12 +181,19 @@ def fit_model_max_likelihood(
     )
 
     result.parameters = domain_params
+    result.parameter_names = parameter_names
     result.log_likelihood = -res.fun
     result.message = res.message
     result.status = res.status
     result.success = res.success
     result.jacobian = -res.jac
-    result.inverse_fisher_information_matrix = inv(hess)
+    result.fisher_information_matrix = inv(hess)
+
+    model_data = model_func(result.parameters, model_template)
+    result.model_data = model_data
+
+    model = DLGM(y_series, model_data, a0, P0, diffuse_state)
+    result.model = model
 
     return result
 
