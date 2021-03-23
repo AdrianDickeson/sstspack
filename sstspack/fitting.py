@@ -181,6 +181,7 @@ def fit_model_max_likelihood(
     )
 
     result.parameters = domain_params
+    dimension = len(domain_params)
     result.parameter_names = parameter_names
     result.log_likelihood = -res.fun
     result.message = res.message
@@ -188,6 +189,9 @@ def fit_model_max_likelihood(
     result.success = res.success
     result.jacobian = -res.jac
     result.fisher_information_matrix = inv(hess)
+    result.akaike_information_criterion = akaike_information_criterion(
+        result.log_likelihood, dimension
+    )
 
     model_data = model_func(result.parameters, model_template)
     result.model_data = model_data
@@ -256,6 +260,12 @@ def hessian(func, x, h=1e-5, relative=False, *args):
 
                 result[idx, idx] = (f1 - 2 * f2 + f3) / hx / hx
 
+    return result
+
+
+def akaike_information_criterion(likelihood, dimension):
+    """"""
+    result = 2 * dimension - 2 * likelihood
     return result
 
 

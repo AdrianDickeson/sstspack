@@ -8,13 +8,7 @@ import sstspack.fitting as fit
 
 from example_nile_data import read_nile_data
 from example_seatbelt_data import read_seatbelt_data
-from example_internet_data import get_internet_data
-
-
-# def nile_local_local_model2(parameters, model_template):
-#     H = full((1, 1), parameters[0])
-#     Q = full((1, 1), parameters[1])
-#     return md.get_local_level_model_data(len(y_timeseries), Q, H)
+from example_internet_data import read_internet_data, get_ARMA_model_function
 
 
 def nile_local_level_model(parameters, model_template):
@@ -53,16 +47,21 @@ def seatbelt_seasonal_model(parameters, model_template):
     return model_template
 
 
-def plot_model_summary(model, title, labels):
+def plot_model_summary(model, title, labels, field="a_hat"):
     """"""
     state_series = pd.Series(
-        [dot(model.Z[idx], model.a_hat[idx])[0, 0] for idx in model.index],
+        [
+            dot(model.Z[idx], model.model_data_df[field][idx])[0, 0]
+            for idx in model.index
+        ],
         index=model.index,
     )
 
+    non_diffuse_index = model.index[(model.d_diffuse + 1) :]
+
     _, ax = plt.subplots(1)
     ax.scatter(model.index, model.y, label=labels[0])
-    ax.plot(model.index, state_series, label=labels[1])
+    ax.plot(non_diffuse_index, state_series[non_diffuse_index], "r-", label=labels[1])
     ax.set_title(title)
     ax.legend()
 
@@ -106,7 +105,10 @@ if __name__ == "__main__":
     model = res.model
     model.smoother()
     plot_model_summary(
-        model, "Nile River Data - Local Level Model", ["Raw Data", "Model State"]
+        model,
+        "Nile River Data - Local Level Model",
+        ["Raw Data", "Model State"],
+        "a_prior",
     )
 
     print("Nile River Data")
@@ -152,6 +154,7 @@ if __name__ == "__main__":
         model,
         "Road Traffic Accident Data - Seasonal Local Level Model",
         ["Raw Data", "Model State"],
+        "a_prior",
     )
 
     print("Road Traffic Accident Data")
@@ -162,20 +165,22 @@ if __name__ == "__main__":
     ##################################################
     # Example - Internet Data - Local Level Model
 
-    y_timeseries = get_internet_data()["Change"]
+    y_timeseries = read_internet_data()["Change"]
 
-    # Parameters [ H, Q ]
-    initial_parameter_values = array([10000, 1000])
-    parameter_bounds = array([(0, inf), (0, inf)])
-    parameter_names = array(["H", "Q"])
+    # Parameters [ Q, phi, theta ]
+    initial_parameter_values = array([10, 0.7, 0.2])
+    parameter_bounds = array([(0, inf), (0, 1), (-1, 1)])
+    parameter_names = array(["Q", "phi", "theta"])
 
-    internet_model_function = nile_local_level_model
-    internet_model_template = md.get_local_level_model_data(y_timeseries.index, 1, 1)
+    internet_model_function = get_ARMA_model_function(1, 1)
+    internet_model_template = md.get_ARMA_model_data(
+        y_timeseries.index, [0.8], [0.2], full((1, 1), 10)
+    )
 
     # Diffuse initialisation used - a0, P0 are ignored
-    a0 = zeros((1, 1))
-    P0 = full((1, 1), 1e6)
-    diffuse_states = [True]
+    a0 = zeros((2, 1))
+    P0 = 1e6 * identity(2)
+    diffuse_states = [True, True]
 
     start_time = time.time()
     res = fit.fit_model_max_likelihood(
@@ -194,7 +199,10 @@ if __name__ == "__main__":
     model = res.model
     model.smoother()
     plot_model_summary(
-        model, "Internet Data - Local Level Model", ["Raw Data", "Model State"]
+        model,
+        "Internet Data - Local Level Model",
+        ["Raw Data", "Model State"],
+        "a_prior",
     )
 
     print("Internet Data")

@@ -1,13 +1,18 @@
 import re
+import time
+import concurrent.futures
 
 import pandas as pd
-from numpy import array
+from numpy import array, full, nan, inf, zeros, identity
 import matplotlib.pyplot as plt
+
+import sstspack.modeldata as md
+import sstspack.fitting as fit
 
 import plot_figs
 
 
-def get_internet_data():
+def read_internet_data():
     """"""
     data = []
     fn = "data/internet.dat"
@@ -26,11 +31,88 @@ def get_internet_data():
     return data_df
 
 
+def get_ARMA_model_function(p, q):
+    """"""
+
+    def internet_ARMA_model_function(parameters, model_template):
+        result = md.get_ARMA_model_data(
+            model_template.index,
+            parameters[1 : (p + 1)],
+            parameters[(p + 1) :],
+            full((1, 1), parameters[0]),
+        )
+        return result
+
+    return internet_ARMA_model_function
+
+
+def get_ARMA_model_AIC(args):  # p, q, y_timeseries):
+    """"""
+    p = args[0]
+    q = args[1]
+    y_timeseries = args[2]
+
+    if p == 0 and q == 0:
+        return nan
+
+    parameter_count = p + q
+    dimension = 1 + parameter_count
+    state_count = max(p, 1 + q)
+
+    initial_parameter_values = array([0.1] * dimension)
+    parameter_bounds = [(0, inf)] + [(-1, 1) for _ in range(parameter_count)]
+    parameter_names = (
+        ["H"]
+        + ["phi_{}".format(idx) for idx in range(p)]
+        + ["theta_{}".format(idx) for idx in range(q)]
+    )
+
+    model_function = get_ARMA_model_function(p, q)
+    model_template = model_function(initial_parameter_values, y_timeseries)
+
+    a0 = zeros((state_count, 1))
+    P0 = identity(state_count)
+    diffuse_states = [True] * state_count
+
+    start_time = time.time()
+    res = fit.fit_model_max_likelihood(
+        initial_parameter_values,
+        parameter_bounds,
+        model_function,
+        y_timeseries,
+        a0,
+        P0,
+        diffuse_states,
+        model_template,
+        parameter_names,
+    )
+    end_time = time.time()
+    print("p:{} q:{} took {:.2f} seconds".format(p, q, end_time - start_time))
+    return res.akaike_information_criterion
+
+
 if __name__ == "__main__":
-    data = get_internet_data()["Change"]
+    data = read_internet_data()["Change"]
     missing_data = data.copy()
     missing_idx = [5, 15, 25, 35, 45, 55, 65, 71, 72, 73, 74, 75, 85, 95]
     missing_data[missing_idx] = pd.NA
 
-    plot_figs.plot_fig88(data, missing_data)
+    # plot_figs.plot_fig88(data, missing_data)
+
+    AIC_values = full((6, 6), nan)
+
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        parameter_list = []
+        for p in range(6):
+            for q in range(6):
+                parameter_list.append(array([p, q, data], dtype=object))
+
+        results = executor.map(get_ARMA_model_AIC, parameter_list)
+
+        for idx, result in enumerate(results):
+            AIC_values[parameter_list[idx][0], parameter_list[idx][1]] = result
+
+    print(AIC_values)
+
     plt.show()
+    print("finished")
