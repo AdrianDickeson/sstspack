@@ -5,3 +5,5 @@ examples/__pycache__/
 venv/
 example_pkg_YOUR_USERNAME_HERE.egg-info/
 *.pyc
+*.log
+*.aux
