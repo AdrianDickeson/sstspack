@@ -125,6 +125,7 @@ def fit_model_max_likelihood(
     parameter_names=None,
 ):
     """"""
+    n = len(y_series)
     initial_params = [
         inverse_parameter_transform_function(params_bounds[idx])(value)
         for idx, value in enumerate(params0)
@@ -191,6 +192,9 @@ def fit_model_max_likelihood(
     result.fisher_information_matrix = inv(hess)
     result.akaike_information_criterion = akaike_information_criterion(
         result.log_likelihood, dimension
+    )
+    result.bayesian_information_criterion = bayesian_information_criterion(
+        result.log_likelihood, dimension, n
     )
 
     model_data = model_func(result.parameters, model_template)
@@ -263,9 +267,15 @@ def hessian(func, x, h=1e-5, relative=False, *args):
     return result
 
 
-def akaike_information_criterion(likelihood, dimension):
+def akaike_information_criterion(log_likelihood, dimension):
     """"""
-    result = 2 * dimension - 2 * likelihood
+    result = 2 * dimension - 2 * log_likelihood
+    return result
+
+
+def bayesian_information_criterion(log_likelihood, dimension, n):
+    """"""
+    result = dimension * log(n) - 2 * log_likelihood
     return result
 
 

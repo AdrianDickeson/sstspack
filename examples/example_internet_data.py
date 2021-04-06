@@ -1,15 +1,18 @@
 import re
 import time
 import concurrent.futures
+import os
 
 import pandas as pd
 from numpy import array, full, nan, inf, zeros, identity
+from numpy.linalg import LinAlgError
 import matplotlib.pyplot as plt
 
 import sstspack.modeldata as md
 import sstspack.fitting as fit
 
 import plot_figs
+import latex_tables
 
 
 def read_internet_data():
@@ -75,20 +78,41 @@ def get_ARMA_model_AIC(args):  # p, q, y_timeseries):
     diffuse_states = [True] * state_count
 
     start_time = time.time()
-    res = fit.fit_model_max_likelihood(
-        initial_parameter_values,
-        parameter_bounds,
-        model_function,
-        y_timeseries,
-        a0,
-        P0,
-        diffuse_states,
-        model_template,
-        parameter_names,
-    )
+    try:
+        res = fit.fit_model_max_likelihood(
+            initial_parameter_values,
+            parameter_bounds,
+            model_function,
+            y_timeseries,
+            a0,
+            P0,
+            diffuse_states,
+            model_template,
+            parameter_names,
+        )
+    except LinAlgError:
+        return nan
     end_time = time.time()
     print("p:{} q:{} took {:.2f} seconds".format(p, q, end_time - start_time))
     return res.akaike_information_criterion
+
+
+def get_ARMA_AIC_model_values(y_timeseries):
+    """"""
+    result = full((6, 6), nan)
+
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        parameter_list = []
+        for p in range(6):
+            for q in range(6):
+                parameter_list.append(array([p, q, y_timeseries], dtype=object))
+
+        results = executor.map(get_ARMA_model_AIC, parameter_list)
+
+        for idx, model_AIC in enumerate(results):
+            result[parameter_list[idx][0], parameter_list[idx][1]] = model_AIC
+
+    return result
 
 
 if __name__ == "__main__":
@@ -97,22 +121,13 @@ if __name__ == "__main__":
     missing_idx = [5, 15, 25, 35, 45, 55, 65, 71, 72, 73, 74, 75, 85, 95]
     missing_data[missing_idx] = pd.NA
 
-    # plot_figs.plot_fig88(data, missing_data)
+    plot_figs.plot_fig88(data, missing_data)
 
-    AIC_values = full((6, 6), nan)
+    AIC_values = get_ARMA_AIC_model_values(data)
+    latex_tables.latex_table81(AIC_values)
 
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        parameter_list = []
-        for p in range(6):
-            for q in range(6):
-                parameter_list.append(array([p, q, data], dtype=object))
-
-        results = executor.map(get_ARMA_model_AIC, parameter_list)
-
-        for idx, result in enumerate(results):
-            AIC_values[parameter_list[idx][0], parameter_list[idx][1]] = result
-
-    print(AIC_values)
+    missing_AIC_values = get_ARMA_AIC_model_values(missing_data)
+    latex_tables.latex_table82(missing_AIC_values)
 
     plt.show()
     print("finished")

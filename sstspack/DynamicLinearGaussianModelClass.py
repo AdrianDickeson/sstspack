@@ -233,7 +233,10 @@ class DynamicLinearGaussianModel(object):
             else:
                 PZ = dot(self.P_prior[key], self.Z[key].T)
                 F = dot(self.Z[key], PZ) + self.H[key]
-                self.F_inverse[key] = inv(F)
+                try:
+                    self.F_inverse[key] = inv(F)
+                except LinAlgError:
+                    self.F_inverse[key] = 0
                 PZF_inv = dot(PZ, self.F_inverse[key])
 
                 self.a_posterior[key] = self.a_prior[key] + dot(PZF_inv, self.v[key])
@@ -262,7 +265,7 @@ class DynamicLinearGaussianModel(object):
                 if index < self.d_diffuse:
                     self.P_infinity_prior_final = P_infinity_prior
                     self.P_star_prior_final = P_star_prior
-                    # TODO: Worn user distribution is still diffuse
+                    # TODO: Warn user distribution is still diffuse
             else:
                 self.a_prior[nxt_key] = a_prior
                 self.P_prior[nxt_key] = P_prior
