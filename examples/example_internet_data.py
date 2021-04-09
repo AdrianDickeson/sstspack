@@ -117,6 +117,7 @@ def get_ARMA_AIC_model_values(y_timeseries):
 
 if __name__ == "__main__":
     data = read_internet_data()["Change"]
+    data.index = range(1, len(data) + 1)
     missing_data = data.copy()
     missing_idx = [5, 15, 25, 35, 45, 55, 65, 71, 72, 73, 74, 75, 85, 95]
     missing_data[missing_idx] = pd.NA

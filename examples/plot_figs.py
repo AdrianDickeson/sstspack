@@ -687,9 +687,9 @@ def plot_fig87(model):
 def plot_with_missing_data(data, ax):
     """"""
     start_idx = None
-    curr_idx = 0
+    curr_idx = 1
     data_idx_list = []
-    while curr_idx < len(data):
+    while curr_idx <= len(data):
         if start_idx is None and not data[curr_idx] is pd.NA:
             start_idx = curr_idx
         if data[curr_idx] is pd.NA and start_idx is not None:
