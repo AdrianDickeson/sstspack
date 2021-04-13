@@ -719,3 +719,45 @@ def plot_fig88(data, missing_data):
 
     fig.tight_layout(rect=FIG_LAYOUT)
     fig.savefig("figures/fig8.8.pdf")
+
+
+def plot_fig89(model):
+    """"""
+    fig, ax = plt.subplots(1)
+    ax.scatter(
+        model.index[:99], model.y[model.index[:99]], label="Change in internet users"
+    )
+    forecast_data = pd.Series(
+        [dot(model.Z[idx], model.a_prior[idx])[0, 0] for idx in model.index],
+        index=model.index,
+    )
+
+    confidence = 0.5
+    percentile = 0.5 + 0.5 * confidence
+    quantile = norm.ppf(percentile)
+    forecast_error = pd.Series(
+        [quantile * sqrt(x[0, 0]) for x in model.F], index=model.index
+    )
+
+    ax.plot(
+        forecast_data.index[(model.d_diffuse + 1) : 100],
+        forecast_data[(model.d_diffuse + 1) : 100],
+        "k",
+        label="One step ahead forecast",
+    )
+    ax.plot(forecast_data.index[100:], forecast_data[100:], "--k")
+
+    ax.plot(
+        forecast_error.index[99:],
+        forecast_error[forecast_error.index[99:]],
+        "g",
+        label="50% Confidence interval",
+    )
+    ax.plot(forecast_error.index[99:], -forecast_error[forecast_error.index[99:]], "g")
+
+    ax.legend()
+    ax.set_title("{} ARMA(1, 1) - Fig. 8.9".format(BOX_JENKINS_DATA_TITLE))
+    ax.set_ylabel("Change")
+    ax.set_xlabel("Minutes")
+
+    fig.savefig("figures/fig8.9.pdf")

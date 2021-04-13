@@ -130,5 +130,40 @@ if __name__ == "__main__":
     missing_AIC_values = get_ARMA_AIC_model_values(missing_data)
     latex_tables.latex_table82(missing_AIC_values)
 
+    data = data.append(pd.Series(array([pd.NA] * 20), index=range(100, 120)))
+
+    initial_parameter_values = array([10, 0.7, 0.2])
+    parameter_bounds = array([(0, inf), (0, 1), (-1, 1)])
+    parameter_names = array(["Q", "phi", "theta"])
+
+    internet_model_function = get_ARMA_model_function(1, 1)
+    internet_model_template = md.get_ARMA_model_data(
+        data.index, [0.8], [0.2], full((1, 1), 10)
+    )
+
+    # Diffuse initialisation used - a0, P0 are ignored
+    a0 = zeros((2, 1))
+    P0 = 1e6 * identity(2)
+    diffuse_states = [True, True]
+
+    start_time = time.time()
+    res = fit.fit_model_max_likelihood(
+        initial_parameter_values,
+        parameter_bounds,
+        internet_model_function,
+        data,
+        a0,
+        P0,
+        diffuse_states,
+        internet_model_template,
+        parameter_names,
+    )
+    end_time = time.time()
+
+    model = res.model
+    model.filter()
+    print("Time taken: {:.2f} seconds\n".format(end_time - start_time))
+
+    plot_figs.plot_fig89(model)
+
     plt.show()
-    print("finished")
