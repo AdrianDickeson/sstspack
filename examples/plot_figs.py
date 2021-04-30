@@ -9,6 +9,7 @@ from sstspack import DynamicLinearGaussianModel as DLGM
 NILE_DATA_TITLE = "Volume of Nile river at Aswan 1871-1970"
 SEATBELT_DATA_TITLE = "Great Britain Road Accident Casulaties 1969-1984"
 BOX_JENKINS_DATA_TITLE = "Box-Jenkins modeling of internet user data"
+MOTORCYCLE_DATA_TITLE = "Simulated Motorcycle Acceleration Data"
 XLIM = (1868, 1973)
 XLABEL = "year"
 FIG_LAYOUT = [0, 0.03, 1, 0.95]
@@ -761,3 +762,42 @@ def plot_fig89(model):
     ax.set_xlabel("Minutes")
 
     fig.savefig("figures/fig8.9.pdf")
+
+
+def plot_fig810(model):
+    """"""
+    fig, axs = plt.subplots(2, 1)
+    fig.suptitle("{} - Fig. 8.10".format(MOTORCYCLE_DATA_TITLE), fontsize=14)
+
+    ax = axs[0]
+    data_index = []
+    data_full = []
+    epsilon_full = []
+    for idx in model.index:
+        for i in range(model.y[idx].shape[0]):
+            data_index.append(idx)
+            data_full.append(model.y[idx][i, 0])
+            epsilon_full.append(model.epsilon_hat[idx][i, 0] / sqrt(model.H[idx][i, i]))
+    a_hat = array([model.a_hat[idx][0, 0] for idx in model.index])
+    confidence = 0.95
+    percentile = 0.5 + 0.5 * confidence
+    quantile = norm.ppf(percentile)
+    V_sqrt95 = quantile * array([sqrt(model.V[idx][0, 0]) for idx in model.index])
+
+    ax.axhline(y=0, color="k", ls="--", alpha=0.75, lw=0.5)
+    ax.scatter(data_index, data_full, s=5, c="b", marker="x", label="Simulated data")
+    ax.plot(model.index, a_hat, "g-", label="Spline model")
+    ax.plot(model.index, a_hat + V_sqrt95, "r--", label="95% Confidence")
+    ax.plot(model.index, a_hat - V_sqrt95, "r--")
+    ax.legend()
+    ax.set_ylabel("Accelaration")
+    ax.set_xlabel("Time")
+
+    ax = axs[1]
+    ax.axhline(y=0, color="k", ls="--", alpha=0.75, lw=0.5)
+    ax.scatter(data_index, epsilon_full, s=5, c="b")
+    ax.set_ylabel("Standardise residual")
+    ax.set_xlabel("Time")
+
+    fig.tight_layout(rect=FIG_LAYOUT)
+    fig.savefig("figures/fig8.10.pdf")

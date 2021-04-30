@@ -13,8 +13,11 @@ def read_nile_data():
 
 
 if __name__ == "__main__":
+    print("Reading Nile timeseries data... ", end="")
     nile_data = read_nile_data()
+    print("Finished")
 
+    print("Analysing timeseries data using local level state space model... ", end="")
     H = 15099
     sigma2_eta = 1469.1
 
@@ -24,6 +27,7 @@ if __name__ == "__main__":
 
     ssm = DLGM(nile_data, model_df, a0, P0)
     ssm.disturbance_smoother()
+    print("Finished")
 
     missing_nile_data = nile_data.copy()
     missing_idx = list(range(20, 40)) + list(range(60, 80))

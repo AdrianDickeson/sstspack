@@ -37,9 +37,9 @@ def read_internet_data():
 def get_ARMA_model_function(p, q):
     """"""
 
-    def internet_ARMA_model_function(parameters, model_template):
+    def internet_ARMA_model_function(parameters, model_template, y_timeseries, dt):
         result = md.get_ARMA_model_data(
-            model_template.index,
+            y_timeseries.index,
             parameters[1 : (p + 1)],
             parameters[(p + 1) :],
             full((1, 1), parameters[0]),
@@ -71,7 +71,7 @@ def get_ARMA_model_AIC(args):  # p, q, y_timeseries):
     )
 
     model_function = get_ARMA_model_function(p, q)
-    model_template = model_function(initial_parameter_values, y_timeseries)
+    model_template = model_function(initial_parameter_values, None, y_timeseries, None)
 
     a0 = zeros((state_count, 1))
     P0 = identity(state_count)

@@ -517,7 +517,7 @@ class DynamicLinearGaussianModel(object):
                     result += self.w(index, key)
                 else:
                     result -= log(det(F_inv))
-                    result += dot(dot(self.v[key], F_inv), self.v[key])[0, 0]
+                    result += dot(dot(self.v[key].T, F_inv), self.v[key])[0, 0]
         result *= -0.5
 
         return result

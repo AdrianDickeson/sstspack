@@ -11,7 +11,7 @@ from example_seatbelt_data import read_seatbelt_data
 from example_internet_data import read_internet_data, get_ARMA_model_function
 
 
-def nile_local_level_model(parameters, model_template):
+def nile_local_level_model(parameters, model_template, y_timeseries, dt):
     model_template.H = parameters[0]
     model_template.Q = parameters[1]
     return model_template
@@ -31,7 +31,7 @@ def get_seatbelt_model_template(y_timeseries):
     return model_template
 
 
-def seatbelt_seasonal_model(parameters, model_template):
+def seatbelt_seasonal_model(parameters, model_template, y_timeseries, dt):
     H = parameters[0]
     Q_local = parameters[1]
     Q_seasonal = parameters[2]

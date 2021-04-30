@@ -123,6 +123,7 @@ def fit_model_max_likelihood(
     diffuse_state,
     model_template=None,
     parameter_names=None,
+    dt=None,
 ):
     """"""
     n = len(y_series)
@@ -132,15 +133,15 @@ def fit_model_max_likelihood(
     ]
     param_funcs = [parameter_transform_function(bounds) for bounds in params_bounds]
 
-    def objective_func(transformed_params, y_series, model_template):
+    def objective_func(transformed_params, y_series, model_template, dt):
         params = [
             parameter_transform_function(params_bounds[idx])(value)
             for idx, value in enumerate(transformed_params)
         ]
-        return inner_objective_func(params, y_series, model_template)
+        return inner_objective_func(params, y_series, model_template, dt)
 
-    def inner_objective_func(params, y_series, model_template):
-        model_data = model_func(params, model_template)
+    def inner_objective_func(params, y_series, model_template, dt):
+        model_data = model_func(params, model_template, y_series, dt)
         model = DLGM(y_series, model_data, a0, P0, diffuse_state)
         return -model.log_likelihood()
 
@@ -148,7 +149,7 @@ def fit_model_max_likelihood(
         objective_func,
         initial_params,
         options={"disp": False},
-        args=(y_series, model_template),
+        args=(y_series, model_template, dt),
         method="BFGS",
         tol=1.0e-16,
     )
@@ -175,10 +176,11 @@ def fit_model_max_likelihood(
         False,
         y_series,
         model_template,
+        dt,
     )
 
     hess = hessian(
-        inner_objective_func, domain_params, 1e-10, False, y_series, model_template
+        inner_objective_func, domain_params, 1e-10, False, y_series, model_template, dt
     )
 
     result.parameters = domain_params
@@ -197,7 +199,7 @@ def fit_model_max_likelihood(
         result.log_likelihood, dimension, n
     )
 
-    model_data = model_func(result.parameters, model_template)
+    model_data = model_func(result.parameters, model_template, y_series, dt)
     result.model_data = model_data
 
     model = DLGM(y_series, model_data, a0, P0, diffuse_state)
