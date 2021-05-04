@@ -4,7 +4,11 @@ import pandas as pd
 from numpy import array, zeros, identity, vstack, inf, full
 import matplotlib.pyplot as plt
 
-from sstspack import modeldata as md, DynamicLinearGaussianModel as DLGM, fitting as fit
+from sstspack import (
+    modeldesign as md,
+    DynamicLinearGaussianModel as DLGM,
+    fitting as fit,
+)
 import plot_figs
 
 

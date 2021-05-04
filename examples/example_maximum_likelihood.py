@@ -3,7 +3,7 @@ import pandas as pd
 import time
 import matplotlib.pyplot as plt
 
-import sstspack.modeldata as md
+import sstspack.modeldesign as md
 import sstspack.fitting as fit
 
 from example_nile_data import read_nile_data
@@ -49,15 +49,8 @@ def seatbelt_seasonal_model(parameters, model_template, y_timeseries, dt):
 
 def plot_model_summary(model, title, labels, field="a_hat"):
     """"""
-    state_series = pd.Series(
-        [
-            dot(model.Z[idx], model.model_data_df[field][idx])[0, 0]
-            for idx in model.index
-        ],
-        index=model.index,
-    )
-
-    non_diffuse_index = model.index[(model.d_diffuse + 1) :]
+    state_series = model.aggregate_field(field)
+    non_diffuse_index = model.non_diffuse_index
 
     _, ax = plt.subplots(1)
     ax.scatter(model.index, model.y, label=labels[0])

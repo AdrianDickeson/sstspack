@@ -8,7 +8,7 @@ from numpy import array, full, nan, inf, zeros, identity
 from numpy.linalg import LinAlgError
 import matplotlib.pyplot as plt
 
-import sstspack.modeldata as md
+import sstspack.modeldesign as md
 import sstspack.fitting as fit
 
 import plot_figs

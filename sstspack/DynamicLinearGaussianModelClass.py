@@ -10,6 +10,7 @@ from numpy import (
     inf,
     sum,
     abs,
+    sqrt,
 )
 from numpy.linalg import inv, det, LinAlgError
 from numpy.random import multivariate_normal as mv_norm
@@ -103,6 +104,98 @@ class DynamicLinearGaussianModel(object):
     def index(self):
         """"""
         return self.model_data_df.index
+
+    @property
+    def non_diffuse_index(self):
+        """"""
+        start_idx = self.d_diffuse + 1
+        return self.model_data_df.index[start_idx:]
+
+    def aggregate_field(self, field, mask=None):
+        """"""
+        data = []
+
+        for idx in self.index:
+            Z = mask
+            if mask is None:
+                Z = self.Z[idx]
+            value = dot(Z, self.model_data_df.loc[idx, field])
+            if value.shape == (1, 1):
+                value = value[0, 0]
+            data.append(value)
+
+        result = pd.Series(data, index=self.index)
+        return result
+
+    def quadratic_aggregate_field(self, field, mask=None):
+        """"""
+        data = []
+
+        for idx in self.index:
+            Z = mask
+            if mask is None:
+                Z = self.Z[idx]
+            value = dot(dot(Z, self.model_data_df.loc[idx, field]), Z.T)
+            if value.shape == (1, 1):
+                value = value[0, 0]
+            data.append(value)
+
+        result = pd.Series(data, index=self.index)
+        return result
+
+    @property
+    def a_prior_aggregate(self):
+        """"""
+        return self.aggregate_field("a_prior")[self.non_diffuse_index]
+
+    @property
+    def a_posterior_aggregate(self):
+        """"""
+        return self.aggregate_field("a_posterior")[self.non_diffuse_index]
+
+    @property
+    def a_hat_aggregate(self):
+        """"""
+        return self.aggregate_field("a_hat")
+
+    @property
+    def P_prior_aggregate(self):
+        """"""
+        return self.quadratic_aggregate_field("P_prior")[self.non_diffuse_index]
+
+    @property
+    def P_posterior_aggregate(self):
+        """"""
+        return self.quadratic_aggregate_field("P_posterior")[self.non_diffuse_index]
+
+    @property
+    def V_aggregate(self):
+        """"""
+        return self.quadratic_aggregate_field("V")
+
+    @property
+    def P_prior_aggregate_sqrt(self):
+        """"""
+        result = self.quadratic_aggregate_field("P_prior")[self.non_diffuse_index]
+        for idx in result.index:
+            result[idx] = sqrt(result[idx])
+        return result
+
+    @property
+    def P_posterior_aggregate_sqrt(self):
+        """"""
+        result = self.quadratic_aggregate_field("P_posterior")[self.non_diffuse_index]
+        for idx in result.index:
+            result[idx] = sqrt(result[idx])
+        return result
+
+    @property
+    def V_aggregate_sqrt(self):
+        """"""
+        result = self.quadratic_aggregate_field("V")
+        for idx in result.index:
+            result[idx] = sqrt(result[idx])
+        return result
 
     @property
     def initial_index(self):

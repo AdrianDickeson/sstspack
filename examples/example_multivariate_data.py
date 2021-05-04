@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from sstspack import DynamicLinearGaussianModel as DLGM, modeldata as md
+from sstspack import DynamicLinearGaussianModel as DLGM, modeldesign as md
 
 
 def get_model_and_sim(y, Q_level, H):

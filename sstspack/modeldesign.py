@@ -248,8 +248,8 @@ def get_intervention_model_data(length_index, intervention_point, Q=0, H=0):
     try:
         _ = iter(length_index)
     except TypeError:
-        prior_index = range(intervention_point)
-        post_index = range(intervention_point, length_index)
+        prior_index = list(range(intervention_point))
+        post_index = list(range(intervention_point, length_index))
     else:
         intervention_idx = list(length_index).index(intervention_point)
         prior_index = [
@@ -300,9 +300,11 @@ def get_time_varying_regression_model_data(length_index, regressors_df, Q, H):
 
 def get_static_model_df(length_index, **kwargs):
     """"""
+    y_timeseries = None
     try:
-        y_timeseries = length_index
-        length_index = length_index.index
+        if type(length_index) != list:
+            y_timeseries = length_index
+            length_index = y_timeseries.index
     except AttributeError:
         y_timeseries = None
 

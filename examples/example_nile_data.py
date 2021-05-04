@@ -1,7 +1,7 @@
 import pandas as pd
 from numpy import full
 
-from sstspack import DynamicLinearGaussianModel as DLGM, modeldata as md
+from sstspack import DynamicLinearGaussianModel as DLGM, modeldesign as md
 import plot_figs as pf
 
 
