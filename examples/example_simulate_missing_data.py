@@ -28,7 +28,7 @@ if __name__ == "__main__":
     y[36:38] = [[[None]], [[None]]]
     non_missing_mask = [not DLGM.is_all_missing(value) for value in y]
 
-    data_df = md.get_local_level_model_data(100, sigma2_eta, H)
+    data_df = md.get_local_level_model_design(100, sigma2_eta, H)
     ssm = DLGM(data["Observed"], data_df, np.array([0.0]), np.array([[1.0]]))
     ssm.filter()
     ssm.smoother()

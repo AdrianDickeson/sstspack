@@ -22,12 +22,12 @@ def get_seatbelt_model_template(y_timeseries):
     Q = 1
     sigma2_omega = full(6, 1)
 
-    model_data1 = md.get_local_level_model_data(y_timeseries.index, Q, H)
-    model_data2 = md.get_frequency_domain_seasonal_model_data(
+    model_data1 = md.get_local_level_model_design(y_timeseries.index, Q, H)
+    model_data2 = md.get_frequency_domain_seasonal_model_design(
         y_timeseries.index, 12, sigma2_omega, H
     )
 
-    model_template = md.combine_model_data([model_data1, model_data2])
+    model_template = md.combine_model_design([model_data1, model_data2])
     return model_template
 
 
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     parameter_names = array(["H", "Q"])
 
     nile_model_function = nile_local_level_model
-    nile_model_template = md.get_local_level_model_data(y_timeseries.index, 1, 1)
+    nile_model_template = md.get_local_level_model_design(y_timeseries.index, 1, 1)
 
     # Diffuse initialisation used - a0, P0 are ignored
     a0 = zeros((1, 1))
@@ -166,7 +166,7 @@ if __name__ == "__main__":
     parameter_names = array(["Q", "phi", "theta"])
 
     internet_model_function = get_ARMA_model_function(1, 1)
-    internet_model_template = md.get_ARMA_model_data(
+    internet_model_template = md.get_ARMA_model_design(
         y_timeseries.index, [0.8], [0.2], full((1, 1), 10)
     )
 

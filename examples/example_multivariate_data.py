@@ -7,7 +7,7 @@ from sstspack import DynamicLinearGaussianModel as DLGM, modeldesign as md
 
 def get_model_and_sim(y, Q_level, H):
     length = len(y)
-    data_df = md.get_local_level_model_data(length, Q_level, H)
+    data_df = md.get_local_level_model_design(length, Q_level, H)
     ssm = DLGM(y, data_df, np.zeros((1, 1)), np.ones((1, 1)))
     ssm.filter()
     ssm.smoother()

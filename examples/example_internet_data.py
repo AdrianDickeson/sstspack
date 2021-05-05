@@ -38,7 +38,7 @@ def get_ARMA_model_function(p, q):
     """"""
 
     def internet_ARMA_model_function(parameters, model_template, y_timeseries, dt):
-        result = md.get_ARMA_model_data(
+        result = md.get_ARMA_model_design(
             y_timeseries.index,
             parameters[1 : (p + 1)],
             parameters[(p + 1) :],
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     parameter_names = array(["Q", "phi", "theta"])
 
     internet_model_function = get_ARMA_model_function(1, 1)
-    internet_model_template = md.get_ARMA_model_data(
+    internet_model_template = md.get_ARMA_model_design(
         data.index, [0.8], [0.2], full((1, 1), 10)
     )
 

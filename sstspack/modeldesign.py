@@ -7,7 +7,7 @@ from scipy.linalg.special_matrices import block_diag
 
 
 # TODO: enable input of parameters as arrays
-def get_local_level_model_data(length_index, Q, H, dt=None):
+def get_local_level_model_design(length_index, Q, H, dt=None):
     """"""
     Z = ones((1, 1))
     d = zeros((1, 1))
@@ -25,7 +25,7 @@ def get_local_level_model_data(length_index, Q, H, dt=None):
     return result
 
 
-def get_local_linear_trend_model_data(length_index, Q, H, dt=None):
+def get_local_linear_trend_model_design(length_index, Q, H, dt=None):
     """"""
     Z = ones((1, 2))
     Z[0, 1] = 0
@@ -55,7 +55,7 @@ def get_local_linear_trend_model_data(length_index, Q, H, dt=None):
     return result
 
 
-def get_time_domain_seasonal_model_data(length_index, s, sigma2_omega, H):
+def get_time_domain_seasonal_model_design(length_index, s, sigma2_omega, H):
     """"""
     Z = zeros((1, s))
     Z[0, 0] = 1
@@ -74,7 +74,7 @@ def get_time_domain_seasonal_model_data(length_index, s, sigma2_omega, H):
     return result
 
 
-def get_frequency_domain_seasonal_model_data(length_index, s, Q_list, H):
+def get_frequency_domain_seasonal_model_design(length_index, s, Q_list, H):
     """"""
     omega = 2 * PI / s
     submodels = []
@@ -96,7 +96,7 @@ def get_frequency_domain_seasonal_model_data(length_index, s, Q_list, H):
         H = zeros((p, p))
         i += 1
 
-    result = combine_model_data(submodels)
+    result = combine_model_design(submodels)
     return result
 
 
@@ -137,42 +137,42 @@ def frequency_domain_model_terms(i, s, omega, Q):
     return Z, T, c, R, Q_i
 
 
-def get_ARMA_model_data(series_length_index, phi_terms, theta_terms, Q):
+def get_ARMA_model_design(series_length_index, phi_terms, theta_terms, Q):
     """"""
-    return get_ARIMA_model_data(series_length_index, phi_terms, 0, theta_terms, Q)
+    return get_ARIMA_model_design(series_length_index, phi_terms, 0, theta_terms, Q)
 
 
-def get_SARMA_model_data(series_length_index, s, PHI_terms, THETA_terms, Q):
+def get_SARMA_model_design(series_length_index, s, PHI_terms, THETA_terms, Q):
     """"""
-    return get_ARMA_x_SARMA_model_data(
+    return get_ARMA_x_SARMA_model_design(
         series_length_index, [], [], s, PHI_terms, THETA_terms, Q
     )
 
 
-def get_ARMA_x_SARMA_model_data(
+def get_ARMA_x_SARMA_model_design(
     series_length_index, phi_terms, theta_terms, s, PHI_terms, THETA_terms, Q
 ):
     """"""
-    return get_ARIMA_x_SARIMA_model_data(
+    return get_ARIMA_x_SARIMA_model_design(
         series_length_index, phi_terms, 0, theta_terms, s, PHI_terms, 0, THETA_terms, Q
     )
 
 
-def get_ARIMA_model_data(series_length_index, phi_terms, d, theta_terms, Q):
+def get_ARIMA_model_design(series_length_index, phi_terms, d, theta_terms, Q):
     """"""
-    return get_ARIMA_x_SARIMA_model_data(
+    return get_ARIMA_x_SARIMA_model_design(
         series_length_index, phi_terms, d, theta_terms, 1, [], 0, [], Q
     )
 
 
-def get_SARIMA_model_data(series_length_index, s, PHI_terms, D, THETA_terms, Q):
+def get_SARIMA_model_design(series_length_index, s, PHI_terms, D, THETA_terms, Q):
     """"""
-    return get_ARIMA_x_SARIMA_model_data(
+    return get_ARIMA_x_SARIMA_model_design(
         series_length_index, [], 0, [], s, PHI_terms, D, THETA_terms, Q
     )
 
 
-def get_ARIMA_x_SARIMA_model_data(
+def get_ARIMA_x_SARIMA_model_design(
     series_length_index, phi_terms, d, theta_terms, s, PHI_terms, D, THETA_terms, Q
 ):
     """"""
@@ -224,7 +224,7 @@ def get_ARIMA_x_SARIMA_model_data(
     return result
 
 
-def get_intervention_model_data(length_index, intervention_point, Q=0, H=0):
+def get_intervention_model_design(length_index, intervention_point, Q=0, H=0):
     """"""
     try:
         H = full((1, 1), H)
@@ -269,7 +269,7 @@ def get_intervention_model_data(length_index, intervention_point, Q=0, H=0):
     return pd.concat([result_prior, result_post])
 
 
-def get_time_varying_regression_model_data(length_index, regressors_df, Q, H):
+def get_time_varying_regression_model_design(length_index, regressors_df, Q, H):
     """"""
     try:
         _ = iter(length_index)
@@ -340,7 +340,7 @@ def get_static_model_df(length_index, **kwargs):
     return result
 
 
-def combine_model_data(model_data_list):
+def combine_model_design(model_data_list):
     """"""
     result = model_data_list[0].copy()
 
@@ -409,7 +409,7 @@ def model_product(standard_terms, s, seasonal_terms):
     return result
 
 
-def get_spline_smoothing_model_data(length_index, lambda_term, H, dt=None):
+def get_spline_smoothing_model_design(length_index, lambda_term, H, dt=None):
     """"""
     if dt is None:
         Z = zeros((1, 2))
@@ -436,6 +436,6 @@ def get_spline_smoothing_model_data(length_index, lambda_term, H, dt=None):
 
     Q = zeros((2, 2))
     Q[1, 1] = H[0, 0] / lambda_term
-    result = get_local_linear_trend_model_data(length_index, Q, H, dt)
+    result = get_local_linear_trend_model_design(length_index, Q, H, dt)
 
     return result

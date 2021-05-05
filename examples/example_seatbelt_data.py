@@ -61,12 +61,12 @@ if __name__ == "__main__":
     Q = 9.35852e-4
     sigma2_omega = full(6, 5.01096e-7)
 
-    model_data1 = md.get_local_level_model_data(y_series.index, Q, H)
-    model_data2 = md.get_frequency_domain_seasonal_model_data(
+    model_data1 = md.get_local_level_model_design(y_series.index, Q, H)
+    model_data2 = md.get_frequency_domain_seasonal_model_design(
         y_series.index, 12, sigma2_omega, H
     )
 
-    model_data = md.combine_model_data([model_data1, model_data2])
+    model_data = md.combine_model_design([model_data1, model_data2])
     a0 = zeros((12, 1))
     P0 = identity(12)
     diffuse_states = [True] * 12
@@ -78,12 +78,12 @@ if __name__ == "__main__":
     plot_figs.plot_fig83(model)
     plot_figs.plot_fig84(model)
 
-    model_data3 = md.get_intervention_model_data(data.index, dt.date(1983, 2, 28))
-    model_data4 = md.get_time_varying_regression_model_data(
+    model_data3 = md.get_intervention_model_design(data.index, dt.date(1983, 2, 28))
+    model_data4 = md.get_time_varying_regression_model_design(
         data.index, data["Petrol Price"].to_frame(), Q=zeros((1, 1)), H=zeros((1, 1))
     )
 
-    model_data = md.combine_model_data(
+    model_data = md.combine_model_design(
         [model_data1, model_data2, model_data3, model_data4]
     )
     a0 = zeros((14, 1))
@@ -104,21 +104,21 @@ if __name__ == "__main__":
     H = 1.0e-4 * array([[5.206, 4.789], [4.789, 10.24]])
     Q_level = 1.0e-5 * array([[4.970, 2.860], [2.860, 1.646]])
     Q_seasonal_list = [zeros((2, 2))] * 6
-    model_data1 = md.get_local_level_model_data(y_series.index, Q_level, H)
-    model_data2 = md.get_frequency_domain_seasonal_model_data(
+    model_data1 = md.get_local_level_model_design(y_series.index, Q_level, H)
+    model_data2 = md.get_frequency_domain_seasonal_model_design(
         y_series.index, 12, Q_seasonal_list, zeros((2, 2))
     )
-    model_data3 = md.get_time_varying_regression_model_data(
+    model_data3 = md.get_time_varying_regression_model_design(
         y_series.index,
         data[["Kilometres", "Petrol Price"]],
         Q=zeros((4, 4)),
         H=zeros((2, 2)),
     )
-    model_data4 = md.get_intervention_model_data(
+    model_data4 = md.get_intervention_model_design(
         data.index, dt.date(1983, 2, 28), H=zeros((2, 2)), Q=zeros((2, 2))
     )
 
-    model_data = md.combine_model_data(
+    model_data = md.combine_model_design(
         [model_data1, model_data2, model_data4, model_data3]
     )
 

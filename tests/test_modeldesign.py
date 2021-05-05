@@ -14,14 +14,14 @@ class Test_modeldata(unittest.TestCase):
         self.long_model_rows = 100
         self.abc_model_index = ["a", "b", "c"]
 
-    def test_get_local_level_model_data(self):
+    def test_get_local_level_model_design(self):
         sigma2_eta = 2
         sigma2_epsilon = 1.1
 
         H = full((1, 1), sigma2_epsilon)
         Q = full((1, 1), sigma2_eta)
 
-        data_df = md.get_local_level_model_data(
+        data_df = md.get_local_level_model_design(
             self.short_model_rows, sigma2_eta, sigma2_epsilon
         )
 
@@ -35,12 +35,12 @@ class Test_modeldata(unittest.TestCase):
         assert_array_equal(data_df.loc[0, "R"], ones((1, 1)))
         assert_array_equal(data_df.loc[0, "Q"], Q)
 
-        data_df = md.get_local_level_model_data(self.short_model_rows, Q, H)
+        data_df = md.get_local_level_model_design(self.short_model_rows, Q, H)
         assert_array_equal(data_df.loc[0, "H"], H)
         assert_array_equal(data_df.loc[0, "Q"], Q)
 
         H = sigma2_epsilon * identity(2)
-        data_df = md.get_local_level_model_data(self.short_model_rows, Q, H)
+        data_df = md.get_local_level_model_design(self.short_model_rows, Q, H)
         assert_array_equal(data_df.loc[0, "Z"], ones((2, 1)))
         assert_array_equal(data_df.loc[0, "d"], zeros((2, 1)))
         assert_array_equal(data_df.loc[0, "H"], H)
@@ -48,7 +48,7 @@ class Test_modeldata(unittest.TestCase):
         H = full((1, 1), sigma2_epsilon)
         Q = full((1, 1), sigma2_eta)
 
-        data_df = md.get_local_level_model_data(self.abc_model_index, Q, H)
+        data_df = md.get_local_level_model_design(self.abc_model_index, Q, H)
         assert_array_equal(data_df.index, self.abc_model_index)
         for idx in data_df.index:
             assert_array_equal(data_df.loc[idx, "Z"], ones((1, 1)))
@@ -59,10 +59,10 @@ class Test_modeldata(unittest.TestCase):
             assert_array_equal(data_df.loc[idx, "R"], ones((1, 1)))
             assert_array_equal(data_df.loc[idx, "Q"], Q)
 
-    def test_get_local_linear_trend_model_data(self):
+    def test_get_local_linear_trend_model_design(self):
         H = ones((1, 1))
         Q = ones((2, 2))
-        data_df = md.get_local_linear_trend_model_data(self.short_model_rows, Q, H)
+        data_df = md.get_local_linear_trend_model_design(self.short_model_rows, Q, H)
 
         self.assertEqual(len(data_df), self.short_model_rows)
         Z = zeros((1, 2))
@@ -79,16 +79,16 @@ class Test_modeldata(unittest.TestCase):
         assert_array_equal(data_df.loc[0, "Q"], Q)
 
         H = identity(2)
-        data_df = md.get_local_linear_trend_model_data(self.short_model_rows, Q, H)
+        data_df = md.get_local_linear_trend_model_design(self.short_model_rows, Q, H)
         assert_array_equal(data_df.loc[0, "Z"], hstack([ones((2, 1)), zeros((2, 1))]))
         assert_array_equal(data_df.loc[0, "d"], zeros((2, 1)))
         assert_array_equal(data_df.loc[0, "H"], H)
 
-    def test_get_time_domain_seasonal_model_data(self):
+    def test_get_time_domain_seasonal_model_design(self):
         s = 3
         H = 5
         sigma2_omega = 2
-        data_df = md.get_time_domain_seasonal_model_data(
+        data_df = md.get_time_domain_seasonal_model_design(
             self.short_model_rows, s, sigma2_omega, H
         )
 
@@ -109,7 +109,7 @@ class Test_modeldata(unittest.TestCase):
         assert_array_equal(data_df.loc[0, "Q"], full((1, 1), sigma2_omega))
 
         H = identity(2)
-        data_df = md.get_time_domain_seasonal_model_data(
+        data_df = md.get_time_domain_seasonal_model_design(
             self.short_model_rows, s, sigma2_omega, H
         )
         assert_array_equal(data_df.loc[0, "Z"], vstack([Z, Z]))
@@ -124,17 +124,17 @@ class Test_modeldata(unittest.TestCase):
         self.assertTrue(all(data_df.b == b))
         self.assertTrue(all(data_df.c == c))
 
-    def test_combine_model_data(self):
+    def test_combine_model_design(self):
         H1 = 3
         Q1 = 2
-        model1 = md.get_local_level_model_data(self.short_model_rows, Q1, H1)
+        model1 = md.get_local_level_model_design(self.short_model_rows, Q1, H1)
         sigma2_omega = 4
         s = 3
         H = 5
-        model2 = md.get_time_domain_seasonal_model_data(
+        model2 = md.get_time_domain_seasonal_model_design(
             self.short_model_rows, s, sigma2_omega, H
         )
-        combined_model = md.combine_model_data([model1, model2])
+        combined_model = md.combine_model_design([model1, model2])
         Z = zeros((1, 4))
         Z[0, 0] = Z[0, 1] = 1
         assert_array_equal(combined_model.loc[0, "Z"], Z)
@@ -154,9 +154,9 @@ class Test_modeldata(unittest.TestCase):
         Q[1, 1] = 4
         assert_array_equal(combined_model.loc[0, "Q"], Q)
 
-        model1 = md.get_local_level_model_data(3, Q=1, H=1)
-        model2 = md.get_intervention_model_data(3, 1)
-        full_model = md.combine_model_data([model1, model2])
+        model1 = md.get_local_level_model_design(3, Q=1, H=1)
+        model2 = md.get_intervention_model_design(3, 1)
+        full_model = md.combine_model_design([model1, model2])
         assert_array_equal(full_model.Z[0], array([[1, 0]]))
         assert_array_equal(full_model.Z[1], array([[1, 1]]))
         assert_array_equal(full_model.Z[2], array([[1, 1]]))
@@ -171,18 +171,18 @@ class Test_modeldata(unittest.TestCase):
         H2 = zeros((2, 2))
         Q1 = identity(2)
         Q2 = identity(2)
-        model1 = md.get_local_level_model_data(1, Q=Q1, H=H1)
-        model2 = md.get_local_level_model_data(1, Q=Q2, H=H2)
-        full_model = md.combine_model_data([model1, model2])
+        model1 = md.get_local_level_model_design(1, Q=Q1, H=H1)
+        model2 = md.get_local_level_model_design(1, Q=Q2, H=H2)
+        full_model = md.combine_model_design([model1, model2])
 
     #         assert_array_equal(full_model.d[0], zeros(2,1))
     #         assert_array_equal(full_model.H[0], identity(2))
 
-    def test_get_frequency_domain_seasonal_model_data(self):
+    def test_get_frequency_domain_seasonal_model_design(self):
         H = 2
         sigma2_omega = [3, 4]
         s = 4
-        data_df = md.get_frequency_domain_seasonal_model_data(
+        data_df = md.get_frequency_domain_seasonal_model_design(
             self.short_model_rows, s, sigma2_omega, H
         )
         Z = ones((1, 3))
@@ -241,11 +241,11 @@ class Test_modeldata(unittest.TestCase):
         Q_expected[3, 1] = 2
         assert_array_equal(Q, Q_expected)
 
-    def test_get_ARMA_model_data(self):
+    def test_get_ARMA_model_design(self):
         phi_terms = [0.25, -0.25]
         theta_terms = [0.4]
         Q = full((1, 1), 0.5)
-        data_df = md.get_ARMA_model_data(
+        data_df = md.get_ARMA_model_design(
             self.short_model_rows, phi_terms, theta_terms, Q
         )
 
@@ -265,13 +265,13 @@ class Test_modeldata(unittest.TestCase):
         assert_array_equal(data_df.loc[0, "R"], R)
         assert_array_equal(data_df.loc[0, "Q"], Q)
 
-    def test_get_SARMA_model_data(self):
+    def test_get_SARMA_model_design(self):
         s = 7
         PHI_terms = [0.25, -0.25]
         THETA_terms = [0.4]
         Q = full((1, 1), 0.5)
 
-        data_df = md.get_SARMA_model_data(
+        data_df = md.get_SARMA_model_design(
             self.short_model_rows, s, PHI_terms, THETA_terms, Q
         )
 
@@ -294,7 +294,7 @@ class Test_modeldata(unittest.TestCase):
         assert_array_equal(data_df.loc[0, "R"], R)
         assert_array_equal(data_df.loc[0, "Q"], Q)
 
-    def test_get_ARMA_x_SARMA_model_data(self):
+    def test_get_ARMA_x_SARMA_model_design(self):
         phi_terms = [0.25, -0.25]
         theta_terms = [0.4]
         s = 4
@@ -302,7 +302,7 @@ class Test_modeldata(unittest.TestCase):
         THETA_terms = []
         Q = full((1, 1), 0.75)
 
-        data_df = md.get_ARMA_x_SARMA_model_data(
+        data_df = md.get_ARMA_x_SARMA_model_design(
             self.short_model_rows, phi_terms, theta_terms, s, PHI_terms, THETA_terms, Q
         )
 
@@ -328,12 +328,12 @@ class Test_modeldata(unittest.TestCase):
         assert_array_equal(data_df.R[0], R)
         assert_array_equal(data_df.Q[0], Q)
 
-    def test_get_ARIMA_model_data(self):
+    def test_get_ARIMA_model_design(self):
         phi_terms = [0.25, -0.25]
         theta_terms = [0.4]
         Q = full((1, 1), 0.5)
         d = 1
-        data_df = md.get_ARIMA_model_data(
+        data_df = md.get_ARIMA_model_design(
             self.short_model_rows, phi_terms, d, theta_terms, Q
         )
 
@@ -354,14 +354,14 @@ class Test_modeldata(unittest.TestCase):
         assert_array_equal(data_df.loc[0, "R"], R)
         assert_array_equal(data_df.loc[0, "Q"], Q)
 
-    def test_get_SARIMA_model_data(self):
+    def test_get_SARIMA_model_design(self):
         s = 4
         PHI_terms = [0.8]
         D = 2
         THETA_terms = []
         Q = full((1, 1), 0.75)
 
-        data_df = md.get_SARIMA_model_data(
+        data_df = md.get_SARIMA_model_design(
             self.short_model_rows, s, PHI_terms, D, THETA_terms, Q
         )
 
@@ -385,7 +385,7 @@ class Test_modeldata(unittest.TestCase):
         assert_array_equal(data_df.R[0], expected_R)
         assert_array_equal(data_df.Q[0], Q)
 
-    def test_get_ARIMA_x_SARIMA_model_data(self):
+    def test_get_ARIMA_x_SARIMA_model_design(self):
         phi_terms = [0.25, -0.25]
         d = 1
         theta_terms = [0.4]
@@ -395,7 +395,7 @@ class Test_modeldata(unittest.TestCase):
         THETA_terms = []
         Q = full((1, 1), 0.75)
 
-        data_df = md.get_ARIMA_x_SARIMA_model_data(
+        data_df = md.get_ARIMA_x_SARIMA_model_design(
             self.short_model_rows,
             phi_terms,
             d,
@@ -499,8 +499,8 @@ class Test_modeldata(unittest.TestCase):
         combined_terms = md.model_product(standard_terms, s, seasonal_terms)
         assert_array_equal(combined_terms, [0.25, -0.25, 0, 0.5, 0.125, -0.125])
 
-    def test_get_intervention_model_data(self):
-        data_df = md.get_intervention_model_data(3, 1, Q=ones((1, 1)))
+    def test_get_intervention_model_design(self):
+        data_df = md.get_intervention_model_design(3, 1, Q=ones((1, 1)))
 
         self.assertEqual(len(data_df), 3)
         assert_array_equal(data_df.Z[0], zeros((1, 1)))
@@ -513,7 +513,7 @@ class Test_modeldata(unittest.TestCase):
         assert_array_equal(data_df.Q[1], ones((1, 1)))
         assert_array_equal(data_df.Q[2], ones((1, 1)))
 
-        data_df = md.get_intervention_model_data(
+        data_df = md.get_intervention_model_design(
             self.abc_model_index, "b", Q=ones((1, 1))
         )
 
@@ -528,7 +528,9 @@ class Test_modeldata(unittest.TestCase):
         assert_array_equal(data_df.Q["b"], ones((1, 1)))
         assert_array_equal(data_df.Q["c"], ones((1, 1)))
 
-        data_df = md.get_intervention_model_data(3, 1, Q=zeros((2, 2)), H=zeros((2, 2)))
+        data_df = md.get_intervention_model_design(
+            3, 1, Q=zeros((2, 2)), H=zeros((2, 2))
+        )
         assert_array_equal(data_df.Z[0], zeros((2, 2)))
         assert_array_equal(data_df.Z[1], identity(2))
         assert_array_equal(data_df.Z[2], identity(2))
@@ -542,13 +544,13 @@ class Test_modeldata(unittest.TestCase):
         assert_array_equal(data_df.H[1], zeros((2, 2)))
         assert_array_equal(data_df.H[2], zeros((2, 2)))
 
-    def test_get_time_varying_regression_model_data(self):
+    def test_get_time_varying_regression_model_design(self):
         H = full((1, 1), 2)
         Q = ones((1, 1))
         regressor_df = pd.Series(
             [full((1, 1), 1), full((1, 1), 2), full((1, 1), -1)]
         ).to_frame("test")
-        data_df = md.get_time_varying_regression_model_data(3, regressor_df, Q, H)
+        data_df = md.get_time_varying_regression_model_design(3, regressor_df, Q, H)
 
         assert_array_equal(data_df.Z[0], full((1, 1), 1))
         assert_array_equal(data_df.Z[1], full((1, 1), 2))
