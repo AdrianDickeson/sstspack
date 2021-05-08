@@ -29,6 +29,7 @@ if __name__ == "__main__":
     ssm.disturbance_smoother()
     print("Finished")
 
+    print("Analysing timeseries with missing data... ", end="")
     missing_nile_data = nile_data.copy()
     missing_idx = list(range(20, 40)) + list(range(60, 80))
     missing_nile_data.iloc[missing_idx] = pd.NA
@@ -41,9 +42,11 @@ if __name__ == "__main__":
     model_df = md.get_local_level_model_design(forecast_nile_data.index, sigma2_eta, H)
     forecast_ssm = DLGM(forecast_nile_data, model_df, a0, P0)
     forecast_ssm.filter()
+    print("finished")
 
     pf.run_diagnostics(ssm)
 
+    print("Producing figures... ", end="")
     pf.plot_fig21(ssm)
     pf.plot_fig22(ssm)
     pf.plot_fig23(ssm)
@@ -52,3 +55,4 @@ if __name__ == "__main__":
     pf.plot_fig26(forecast_ssm)
     pf.plot_fig27(ssm)
     pf.plot_fig28(ssm)
+    print("Finished")
