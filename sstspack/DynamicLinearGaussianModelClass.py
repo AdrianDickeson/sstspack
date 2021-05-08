@@ -501,7 +501,7 @@ class DynamicLinearGaussianModel(object):
                     next_N0 = self.N0[next_key]
 
                 if det(self.F_infinity[key]) == 0:
-                    self, epsilon_hat[key] = dot(
+                    self.epsilon_hat[key] = dot(
                         self.H[key],
                         dot(self.F_inverse[key], self.v[key])
                         - dot(self.K0[key], next_r0),
