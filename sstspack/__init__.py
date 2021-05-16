@@ -1,1 +1,4 @@
 from sstspack.DynamicLinearGaussianModelClass import DynamicLinearGaussianModel
+from sstspack.GeneralisedDynamicLinearModelClass import GeneralisedDynamicLinearModel
+
+from sstspack.fitting import fit_model_max_likelihood

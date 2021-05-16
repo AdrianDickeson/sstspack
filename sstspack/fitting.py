@@ -1,4 +1,19 @@
-from numpy import exp, sqrt, isinf, log, array, zeros, ravel, set_printoptions
+from math import sin, cos
+
+from numpy import (
+    exp,
+    sqrt,
+    isinf,
+    log,
+    array,
+    zeros,
+    ravel,
+    set_printoptions,
+    dot,
+    reshape,
+    prod,
+    diag,
+)
 from numpy.linalg import inv
 from scipy.optimize import minimize
 
@@ -278,6 +293,36 @@ def akaike_information_criterion(log_likelihood, dimension):
 def bayesian_information_criterion(log_likelihood, dimension, n):
     """"""
     result = dimension * log(n) - 2 * log_likelihood
+    return result
+
+
+def correlation_matrix(anglar_coordenants):
+    """"""
+    len_coords = len(anglar_coordenants)
+    n = int((1 + sqrt(1 + 4 * len_coords)) / 2)
+
+    theta = reshape(anglar_coordenants, (n, n - 1))
+    print(theta, end="\n\n")
+    B = zeros((n, n))
+
+    for i in range(n):
+        for j in range(n):
+            if j < n - 1:
+                B[i, j] = cos(theta[i, j]) * prod([sin(x) for x in theta[i, :j]])
+            else:
+                B[i, j] = prod([sin(x) for x in theta[i, :j]])
+
+    print(B, end="\n\n")
+    C = dot(B, B.T)
+    return C
+
+
+def correlation_to_variances_matrix(correlation_matrix, variances):
+    """"""
+    std_deviations = sqrt(variances)
+    V = diag(std_deviations)
+
+    result = dot(dot(V, correlation_matrix), V)
     return result
 
 
