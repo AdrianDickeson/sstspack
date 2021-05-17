@@ -317,7 +317,7 @@ def correlation_matrix(anglar_coordenants):
     return C
 
 
-def correlation_to_variances_matrix(correlation_matrix, variances):
+def correlation_to_variance_matrix(correlation_matrix, variances):
     """"""
     std_deviations = sqrt(variances)
     V = diag(std_deviations)
