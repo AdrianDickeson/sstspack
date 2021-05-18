@@ -302,7 +302,6 @@ def correlation_matrix(anglar_coordenants):
     n = int((1 + sqrt(1 + 4 * len_coords)) / 2)
 
     theta = reshape(anglar_coordenants, (n, n - 1))
-    print(theta, end="\n\n")
     B = zeros((n, n))
 
     for i in range(n):
@@ -312,7 +311,6 @@ def correlation_matrix(anglar_coordenants):
             else:
                 B[i, j] = prod([sin(x) for x in theta[i, :j]])
 
-    print(B, end="\n\n")
     C = dot(B, B.T)
     return C
 

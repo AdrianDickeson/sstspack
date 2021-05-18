@@ -167,9 +167,9 @@ def plot_correlogram(ax, correl_data, variance, title):
     xlim = (0, len(correl_data) + 1)
     bound = array([norm.ppf(0.995) * sqrt(variance), norm.ppf(0.995) * sqrt(variance)])
 
-    d2 = ax.fill_between(xlim, bound, -bound, alpha=0.5, color="orange")
+    d2 = ax.fill_between(xlim, bound, -1 * bound, alpha=0.5, color="orange")
     ax.plot(xlim, bound, c="red")
-    ax.plot(xlim, -bound, c="red")
+    ax.plot(xlim, -1 * bound, c="red")
 
     ax.bar(range(1, len(correl_data) + 1), correl_data)
     ax.set_ylim(-1, 1)
@@ -526,11 +526,9 @@ def plot_seasonal_breakdown(axs, model, level_indexes, seasonal_indexes):
     ).T
     ax = axs[0]
     ax.plot(model.index, model.y, "g-.")
-    state_data = hstack(model.a_hat)
     ax.plot(model.index, ravel(level_data), "r-")
     ax.set_title("Level")
 
-    Z = model.Z[model.index[0]].copy()
     ax = axs[1]
     ax.plot(model.index, ravel(seasonal_data))
     ax.axhline(y=0, color="k", ls="--", alpha=0.75, lw=0.5)

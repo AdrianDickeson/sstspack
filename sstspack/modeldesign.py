@@ -199,7 +199,7 @@ def get_ARIMA_x_SARIMA_model_design(
     for idx in range(D):
         colidx = difference_length_index - s * idx - 1
         difference_terms[colidx] = 1
-        for lag in range(s - 1):
+        for _ in range(s - 1):
             T[colidx, colidx - 1] = 1
             colidx -= 1
         T[colidx, :] = difference_terms.copy()

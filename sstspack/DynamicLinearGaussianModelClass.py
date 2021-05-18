@@ -266,7 +266,9 @@ class DynamicLinearGaussianModel(object):
             )
 
     def filter(self):
-        """"""
+        """
+        Perform the Kalman filter with the y data series and the model design
+        """
         for index, key in enumerate(self.index):
             PZ = dot(self.P_prior[key], self.Z[key].T)
             self.F[key] = dot(self.Z[key], PZ) + self.H[key]

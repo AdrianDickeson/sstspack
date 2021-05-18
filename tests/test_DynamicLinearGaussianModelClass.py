@@ -4,12 +4,12 @@ import numpy as np
 import pandas as pd
 from numpy.testing import assert_array_equal
 
-from sstspack import DynamicLinearGaussianModel as DLGM, modeldata as md
+from sstspack import DynamicLinearGaussianModel as DLGM, modeldesign as md
 
 
-class TestLinearGaussianModel(unittest.TestCase):
+class TestDynamicLinearGaussianModel(unittest.TestCase):
     def SetupLocalModel(self, series_length, sigma2_eta, H):
-        self.local_model_data = md.get_local_level_model_data(
+        self.local_model_design = md.get_local_level_model_design(
             series_length, sigma2_eta, H
         )
 
@@ -121,10 +121,10 @@ class TestLinearGaussianModel(unittest.TestCase):
         self.y = pd.Series(y_data, name="Observed")
 
     def GetLocalModel(self):
-        return DLGM(self.y, self.local_model_data, self.a0, self.P0)
+        return DLGM(self.y, self.local_model_design, self.a0, self.P0)
 
     def GetDiffuseLocalModel(self):
-        return DLGM(self.y, self.local_model_data, self.a0, self.P0, [True])
+        return DLGM(self.y, self.local_model_design, self.a0, self.P0, [True])
 
     def setUp(self):
         # Setup local-level mpdel
@@ -189,7 +189,7 @@ class TestLinearGaussianModel(unittest.TestCase):
         )
 
     def test_simulate_model(self):
-        DLGM.simulate_model(self.local_model_data, self.a0, self.P0)
+        DLGM.simulate_model(self.local_model_design, self.a0, self.P0)
 
     def test_log_likelihood(self):
         local_model = self.GetLocalModel()
@@ -202,7 +202,7 @@ class TestLinearGaussianModel(unittest.TestCase):
 
         missing_y = self.y.copy()
         missing_y[20:30] = None
-        local_model = DLGM(missing_y, self.local_model_data, self.a0, self.P0)
+        local_model = DLGM(missing_y, self.local_model_design, self.a0, self.P0)
         log_lik = local_model.log_likelihood()
         self.assertAlmostEqual(log_lik, 28.047420202120488)
 
@@ -295,8 +295,8 @@ class TestLinearGaussianModel(unittest.TestCase):
         y_val_mv = np.full((2, 1), None)
         y_val_mv[0, 0] = y_val
         y_missing_mv = pd.Series([y_val_mv])
-        model_uv = md.get_local_level_model_data(1, 1, 1)
-        model_mv = md.get_local_level_model_data(1, 1, np.identity(2))
+        model_uv = md.get_local_level_model_design(1, 1, 1)
+        model_mv = md.get_local_level_model_design(1, 1, np.identity(2))
 
         a0 = np.zeros((1, 1))
         P0 = np.ones((1, 1))
@@ -321,7 +321,7 @@ class TestLinearGaussianModel(unittest.TestCase):
     def test_set_up_initial_terms(self):
         y_val = 2
         y_data = pd.Series(np.full(1, y_val))
-        model = md.get_local_level_model_data(1, 1, 1)
+        model = md.get_local_level_model_design(1, 1, 1)
         a0 = np.zeros((1, 1))
         P0 = np.ones((1, 1))
         ssm_data = DLGM(y_data, model, a0, P0)
@@ -389,7 +389,7 @@ class TestLinearGaussianModel(unittest.TestCase):
     def test_filter_row(self):
         y_data = pd.Series([np.ones((1, 1))])
         y_missing = pd.Series([np.full((1, 1), pd.NA)])
-        model_data = md.get_local_level_model_data(1, 1, 1)
+        model_data = md.get_local_level_model_design(1, 1, 1)
         a0 = np.zeros((1, 1))
         P0 = np.ones((1, 1))
 
