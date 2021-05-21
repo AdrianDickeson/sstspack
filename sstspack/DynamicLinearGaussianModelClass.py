@@ -323,7 +323,7 @@ class DynamicLinearGaussianModel(object):
                     self.P_star_posterior[key], self.P_infinity_posterior[key]
                 )
 
-                if all(abs(ravel(self.P_infinity_posterior[key]) <= EPSILON)):
+                if all(abs(ravel(self.P_infinity_posterior[key])) <= EPSILON):
                     self.d_diffuse = index
             else:
                 PZ = dot(self.P_prior[key], self.Z[key].T)
@@ -417,26 +417,36 @@ class DynamicLinearGaussianModel(object):
                     next_N2 = self.N2[next_key]
 
             if index <= self.d_diffuse:
-                # TODO:  Deal with case when F_infinity == 0
-                self.r0[key] = dot(self.L0[key].T, next_r0)
-                self.r1[key] = (
-                    dot(dot(self.Z[key].T, self.F1[key]), self.v[key])
-                    + dot(self.L0[key].T, next_r1)
-                    + dot(self.L1[key].T, next_r0)
-                )
-                self.N0[key] = dot(dot(self.L0[key].T, next_N0), self.L0[key])
-                self.N1[key] = (
-                    dot(dot(self.Z[key].T, self.F1[key]), self.Z[key])
-                    + dot(dot(self.L0[key].T, next_N1), self.L0[key])
-                    + dot(dot(self.L1[key].T, next_N0), self.L0[key])
-                )
-                self.N2[key] = (
-                    dot(dot(self.Z[key].T, self.F2[key]), self.Z[key])
-                    + dot(dot(self.L0[key].T, next_N2), self.L0[key])
-                    + dot(dot(self.L0[key].T, next_N1), self.L1[key])
-                    + dot(dot(self.L1[key].T, next_N1), self.L0[key])
-                    + dot(dot(self.L1[key].T, next_N0), self.L1[key])
-                )
+                if all(abs(ravel(self.F_infinity[key])) <= EPSILON):
+                    self.r0[key] = dot(
+                        dot(self.Z[key].T, self.F_inverse[key]), self.v[key]
+                    ) - dot(self.L0[key].T, next_r0)
+                    self.r1[key] = dot(self.T[key].T, next_r1)
+                    self.N0[key] = dot(
+                        dot(self.Z[key].T, self.F_inverse[key]), self.Z[key]
+                    ) + dot(dot(self.L0[key].T, next_N0), self.L0[key])
+                    self.N1[key] = dot(dot(self.T[key].T, next_N1), self.L0[key])
+                    self.N2[key] = dot(dot(self.T[key], next_N2), self.T[key])
+                else:
+                    self.r0[key] = dot(self.L0[key].T, next_r0)
+                    self.r1[key] = (
+                        dot(dot(self.Z[key].T, self.F1[key]), self.v[key])
+                        + dot(self.L0[key].T, next_r1)
+                        + dot(self.L1[key].T, next_r0)
+                    )
+                    self.N0[key] = dot(dot(self.L0[key].T, next_N0), self.L0[key])
+                    self.N1[key] = (
+                        dot(dot(self.Z[key].T, self.F1[key]), self.Z[key])
+                        + dot(dot(self.L0[key].T, next_N1), self.L0[key])
+                        + dot(dot(self.L1[key].T, next_N0), self.L0[key])
+                    )
+                    self.N2[key] = (
+                        dot(dot(self.Z[key].T, self.F2[key]), self.Z[key])
+                        + dot(dot(self.L0[key].T, next_N2), self.L0[key])
+                        + dot(dot(self.L0[key].T, next_N1), self.L1[key])
+                        + dot(dot(self.L1[key].T, next_N1), self.L0[key])
+                        + dot(dot(self.L1[key].T, next_N0), self.L1[key])
+                    )
 
                 self.a_hat[key] = (
                     self.a_prior[key]
