@@ -799,3 +799,44 @@ def plot_fig810(model):
 
     fig.tight_layout(rect=FIG_LAYOUT)
     fig.savefig("figures/fig8.10.pdf")
+
+
+def plot_fig121(particle_model, gaussian_model):
+    """"""
+    fig, axs = plt.subplots(2, 2)
+    fig.suptitle("{} - Fig. 12.1".format(NILE_DATA_TITLE), fontsize=14)
+
+    ax = axs[0, 0]
+    ax.plot(
+        particle_model.index, particle_model.a_posterior, "b", label="Particle Filter"
+    )
+    ax.scatter(particle_model.index, particle_model.y, label="Data")
+    confidence90 = norm.ppf(0.95) * array([sqrt(x) for x in particle_model.P_posterior])
+    ax.plot(
+        particle_model.index,
+        particle_model.a_posterior + confidence90,
+        "k--",
+        label="90% conf.",
+    )
+    ax.plot(particle_model.index, particle_model.a_posterior - confidence90, "k--")
+    ax.legend()
+
+    ax = axs[0, 1]
+    ax.plot(
+        particle_model.index, particle_model.a_posterior, "--", label="Particle Filter"
+    )
+    ax.plot(gaussian_model.index, gaussian_model.a_posterior, label="Kalman Filter")
+    ax.legend()
+
+    ax = axs[1, 0]
+    ax.plot(
+        particle_model.index, particle_model.P_posterior, "--", label="Particle Filter"
+    )
+    ax.plot(gaussian_model.index, gaussian_model.P_posterior, label="Kalman Filter")
+    ax.legend()
+
+    ax = axs[1, 1]
+    ax.plot(particle_model.index, particle_model.ESS)
+
+    fig.tight_layout(rect=FIG_LAYOUT)
+    fig.savefig("figures/fig12.1.pdf")
