@@ -1,7 +1,7 @@
 from numpy import zeros, ones, identity, hstack, dot
 import matplotlib.pyplot as plt
 
-from sstspack import DynamicLinearGaussianModel as DLGM, modeldesign as md
+from sstspack import DynamicLinearGaussianModel as DLGM, GaussianModelDesign as md
 
 
 def plot_sim(model_sim, title, plot_idx, model_df):

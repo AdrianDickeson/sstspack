@@ -4,7 +4,7 @@ from numpy import array
 
 from sstspack.ParticleFilterClass import ParticleFilter
 from sstspack.ParticleModelDesign import get_local_level_particle_model_design
-from sstspack.modeldesign import get_local_level_model_design
+from sstspack.GaussianModelDesign import get_local_level_model_design
 from sstspack import DynamicLinearGaussianModel as DLGM
 
 from example_nile_data import read_nile_data

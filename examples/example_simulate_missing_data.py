@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from sstspack import DynamicLinearGaussianModel as DLGM, modeldesign as md
+from sstspack import DynamicLinearGaussianModel as DLGM, GaussianModelDesign as md
 
 pd.set_option("display.max_columns", 100)
 

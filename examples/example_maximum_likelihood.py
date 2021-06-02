@@ -3,7 +3,7 @@ import pandas as pd
 import time
 import matplotlib.pyplot as plt
 
-import sstspack.modeldesign as md
+import sstspack.GaussianModelDesign as md
 import sstspack.fitting as fit
 
 from example_nile_data import read_nile_data

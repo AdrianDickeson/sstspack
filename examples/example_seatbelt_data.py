@@ -6,7 +6,7 @@ from numpy import array, zeros, ones, full, identity, hstack, dot, ravel, inf
 import matplotlib.pyplot as plt
 
 from sstspack import DynamicLinearGaussianModel as DLGM
-import sstspack.modeldesign as md
+import sstspack.GaussianModelDesign as md
 import sstspack.fitting as fit
 
 import plot_figs

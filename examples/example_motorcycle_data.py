@@ -5,7 +5,7 @@ from numpy import array, zeros, identity, vstack, inf, full
 import matplotlib.pyplot as plt
 
 from sstspack import (
-    modeldesign as md,
+    GaussianModelDesign as md,
     DynamicLinearGaussianModel as DLGM,
     fitting as fit,
 )

@@ -1,12 +1,14 @@
 import pandas as pd
 
+import sstspack.GaussianModelDesign as md
+
 
 def identity(x):
     """"""
     return x
 
 
-def get_local_level_particle_model_design(y_timeseries, H, Q):
+def get_local_level_particle_model_design(length_index, H, Q):
     """"""
 
     def a(particles, weights):
@@ -17,15 +19,9 @@ def get_local_level_particle_model_design(y_timeseries, H, Q):
 
     X = {"a": a, "P": P}
 
-    y_length = len(y_timeseries)
-    data = {
-        "H": [H] * y_length,
-        "Q": [Q] * y_length,
-        "a_prior": [pd.NA] * y_length,
-        "P_prior": [pd.NA] * y_length,
-        "a_posterior": [pd.NA] * y_length,
-        "P_posterior": [pd.NA] * y_length,
-        "X": [X] * y_length,
-    }
-    result = pd.DataFrame(data, index=y_timeseries.index)
+    H = H
+    Q = Q
+
+    result = md.get_static_model_df(length_index, H=H, Q=Q, X=X)
+
     return result

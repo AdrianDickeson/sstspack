@@ -4,10 +4,10 @@ from numpy.ma.testutils import assert_array_equal, assert_array_almost_equal
 from numpy import ones, zeros, full, identity, hstack, vstack, pi as PI, array
 import pandas as pd
 
-import sstspack.modeldesign as md
+import sstspack.GaussianModelDesign as md
 
 
-class Test_modeldata(unittest.TestCase):
+class Test_GaussianModelDesign(unittest.TestCase):
     def setUp(self):
         self.model_columns = ["Z", "d", "H", "T", "c", "R", "Q"]
         self.short_model_rows = 1
