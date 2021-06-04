@@ -316,12 +316,15 @@ def get_static_model_df(length_index, **kwargs):
     else:
         index = length_index
         length = len(length_index)
-    result = pd.DataFrame(index=index)
 
+    result = pd.DataFrame(index=index)
     for key in kwargs:
         result[key] = [kwargs[key]] * length
 
-    if not y_timeseries is None:
+    adjustment_columns = ["Z", "d", "H"]
+    if (not y_timeseries is None) and all(
+        [col in result.columns for col in adjustment_columns]
+    ):
         for idx in index:
             p_model = result.Z[idx].shape[0]
             p_series = len(y_timeseries[idx])
