@@ -1,4 +1,4 @@
-from numpy.random import normal
+from numpy.random import normal, choice
 from numpy import zeros, sqrt, array, exp, log, pi as PI
 import pandas as pd
 
@@ -6,11 +6,12 @@ import pandas as pd
 class ParticleFilter(object):
     """"""
 
-    def __init__(self, y_series, model_design_df, a1, P1):
+    def __init__(self, y_series, model_design_df, a1, P1, resample_level):
         """"""
         self.N = 10000
+        self.resample_level = resample_level
         estimation_columns = ["a", "P"]
-        self.model_design = model_design_df
+        self.model_design = model_design_df.copy()
         self.model_design.insert(0, "y", y_series)
         self.model_design = self.model_design.reindex(
             columns=self.model_design.columns.tolist() + estimation_columns
@@ -20,7 +21,8 @@ class ParticleFilter(object):
             "ESS",
             "particles_prior",
             "particles_posterior",
-            "weights",
+            "weights_prior",
+            "weights_posterior",
             "a_prior",
             "a_posterior",
             "P_prior",
@@ -34,9 +36,9 @@ class ParticleFilter(object):
         self.a_prior[self.index_initial] = a1
         self.P_prior[self.index_initial] = P1
 
-    def filter(self, resample_level):
+    def filter(self):
         """"""
-        self.weights[self.index_initial] = zeros(self.N)
+        self.weights_prior[self.index_initial] = zeros(self.N)
 
         initial_weights = array([1 / self.N] * self.N)
 
@@ -60,25 +62,29 @@ class ParticleFilter(object):
             if idx == 0:
                 prev_weights = initial_weights
             else:
-                prev_weights = self.weights[self.index[idx - 1]]
+                prev_weights = self.weights_posterior[self.index[idx - 1]]
 
-            self.weights[key] = prev_weights * array(
+            sigma2 = self.H[key] + self.P_prior[key]
+
+            self.weights_prior[key] = prev_weights * array(
                 [
                     exp(
                         -0.5 * log(2 * PI)
-                        - 0.5 * log(self.H[key])
-                        - 0.5 * (self.y[key] - x) ** 2 / self.H[key]
+                        - 0.5 * log(sigma2)
+                        - 0.5 * (self.y[key] - x) ** 2 / sigma2
                     )
                     for x in self.particles_prior[key]
                 ]
             )
-            self.weights[key] = self.weights[key] / sum(self.weights[key])
+            self.weights_prior[key] = self.weights_prior[key] / sum(
+                self.weights_prior[key]
+            )
 
             # Step 3: Estimate quantities of interest
             for field in self.X[key]:
                 full_field = "{}_posterior".format(field)
                 self.model_design.loc[key, full_field] = self.X[key][field](
-                    self.particles_prior[key], self.weights[key]
+                    self.particles_prior[key], self.weights_prior[key]
                 )
 
             if idx < len(self.index) - 1:
@@ -89,7 +95,15 @@ class ParticleFilter(object):
             self.ESS[key] = self.effective_sample_size(key)
 
             # Step 4: Calculate posterior particles
-            self.particles_posterior[key] = self.particles_prior[key]
+            if self.ESS[key] < self.resample_level:
+                idx_resample = choice(
+                    range(self.N), self.N, replace=True, p=self.weights_prior[key]
+                )
+                self.particles_posterior[key] = self.particles_prior[key][idx_resample]
+                self.weights_posterior[key] = self.weights_prior[key][idx_resample]
+            else:
+                self.particles_posterior[key] = self.particles_prior[key].copy()
+                self.weights_posterior[key] = self.weights_prior[key].copy()
 
     def __getattr__(self, name):
         """"""
@@ -112,5 +126,5 @@ class ParticleFilter(object):
 
     def effective_sample_size(self, key):
         """"""
-        result = sum(self.weights[key] ** 2) ** -1
+        result = sum(self.weights_prior[key] ** 2) ** -1
         return result

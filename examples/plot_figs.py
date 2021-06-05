@@ -801,11 +801,8 @@ def plot_fig810(model):
     fig.savefig("figures/fig8.10.pdf")
 
 
-def plot_fig121(particle_model, gaussian_model):
+def figs12(axs, particle_model, gaussian_model):
     """"""
-    fig, axs = plt.subplots(2, 2)
-    fig.suptitle("{} - Fig. 12.1".format(NILE_DATA_TITLE), fontsize=14)
-
     ax = axs[0, 0]
     ax.plot(
         particle_model.index, particle_model.a_posterior, "b", label="Particle Filter"
@@ -820,6 +817,7 @@ def plot_fig121(particle_model, gaussian_model):
     )
     ax.plot(particle_model.index, particle_model.a_posterior - confidence90, "k--")
     ax.legend()
+    ax.set_ylim((400, 1400))
 
     ax = axs[0, 1]
     ax.plot(
@@ -827,6 +825,7 @@ def plot_fig121(particle_model, gaussian_model):
     )
     ax.plot(gaussian_model.index, gaussian_model.a_posterior, label="Kalman Filter")
     ax.legend()
+    ax.set_ylim((700, 1200))
 
     ax = axs[1, 0]
     ax.plot(
@@ -834,9 +833,30 @@ def plot_fig121(particle_model, gaussian_model):
     )
     ax.plot(gaussian_model.index, gaussian_model.P_posterior, label="Kalman Filter")
     ax.legend()
+    ax.set_ylim((0, 15000))
 
     ax = axs[1, 1]
     ax.plot(particle_model.index, particle_model.ESS)
+    ax.set_ylim((0, 10000))
+
+
+def plot_fig121(particle_model, gaussian_model):
+    """"""
+    fig, axs = plt.subplots(2, 2)
+    fig.suptitle("{} - Fig. 12.1".format(NILE_DATA_TITLE), fontsize=14)
+
+    figs12(axs, particle_model, gaussian_model)
 
     fig.tight_layout(rect=FIG_LAYOUT)
     fig.savefig("figures/fig12.1.pdf")
+
+
+def plot_fig122(particle_model, gaussian_model):
+    """"""
+    fig, axs = plt.subplots(2, 2)
+    fig.suptitle("{} - Fig. 12.2".format(NILE_DATA_TITLE), fontsize=14)
+
+    figs12(axs, particle_model, gaussian_model)
+
+    fig.tight_layout(rect=FIG_LAYOUT)
+    fig.savefig("figures/fig12.2.pdf")
