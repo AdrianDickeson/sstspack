@@ -1,15 +1,16 @@
 from numpy.random import normal, choice
-from numpy import zeros, sqrt, array, exp, log, pi as PI
+from numpy import zeros, sqrt, array, exp, log, pi as PI, full
 import pandas as pd
 
 
 class ParticleFilter(object):
     """"""
 
-    def __init__(self, y_series, model_design_df, a1, P1, resample_level):
+    def __init__(self, y_series, model_design_df, a1, P1, N, resample_level, aux=False):
         """"""
-        self.N = 10000
+        self.N = N
         self.resample_level = resample_level
+        self.aux = aux
         estimation_columns = ["a", "P"]
         self.model_design = model_design_df.copy()
         self.model_design.insert(0, "y", y_series)
@@ -43,6 +44,22 @@ class ParticleFilter(object):
         initial_weights = array([1 / self.N] * self.N)
 
         for idx, key in enumerate(self.index):
+            if idx == 0:
+                prev_weights = initial_weights
+            else:
+                prev_weights = self.weights_posterior[self.index[idx - 1]]
+
+            # Auxiliary filter step
+            if self.aux == True and idx > 0:
+                weights_intermediate = self.calculate_weights(
+                    key, self.particles_prior[key], prev_weights
+                )
+
+                idx_resample = choice(
+                    range(self.N), self.N, replace=True, p=weights_intermediate
+                )
+                self.particles_prior[key] = self.particles_prior[key][idx_resample]
+
             # Step 1: Sample particles from importance distribution
             if idx == 0:
                 self.particles_prior[key] = normal(
@@ -51,33 +68,15 @@ class ParticleFilter(object):
                     size=self.N,
                 )
             else:
-                prev_key = self.index[idx - 1]
                 self.particles_prior[key] = normal(
-                    loc=self.particles_posterior[prev_key],
+                    loc=self.particles_prior[key],
                     scale=sqrt(self.Q[key]),
                     size=self.N,
                 )
 
             # Step 2: Calculate weight for particles
-            if idx == 0:
-                prev_weights = initial_weights
-            else:
-                prev_weights = self.weights_posterior[self.index[idx - 1]]
-
-            sigma2 = self.H[key] + self.P_prior[key]
-
-            self.weights_prior[key] = prev_weights * array(
-                [
-                    exp(
-                        -0.5 * log(2 * PI)
-                        - 0.5 * log(sigma2)
-                        - 0.5 * (self.y[key] - x) ** 2 / sigma2
-                    )
-                    for x in self.particles_prior[key]
-                ]
-            )
-            self.weights_prior[key] = self.weights_prior[key] / sum(
-                self.weights_prior[key]
+            self.weights_prior[key] = self.calculate_weights(
+                key, self.particles_prior[key], prev_weights
             )
 
             # Step 3: Estimate quantities of interest
@@ -87,15 +86,17 @@ class ParticleFilter(object):
                     self.particles_prior[key], self.weights_prior[key]
                 )
 
-            if idx < len(self.index) - 1:
-                nxt_key = self.index[idx + 1]
-                self.a_prior[nxt_key] = self.a_posterior[key]
-                self.P_prior[nxt_key] = self.P_posterior[key]
+                if idx < len(self.index) - 1:
+                    nxt_key = self.index[idx + 1]
+                    nxt_full_field = "{}_prior".format(field)
+                    self.model_design.loc[
+                        nxt_key, nxt_full_field
+                    ] = self.model_design.loc[key, full_field]
 
             self.ESS[key] = self.effective_sample_size(key)
 
             # Step 4: Calculate posterior particles
-            if self.ESS[key] < self.resample_level:
+            if self.ESS[key] < self.resample_level and not self.aux:
                 idx_resample = choice(
                     range(self.N), self.N, replace=True, p=self.weights_prior[key]
                 )
@@ -104,6 +105,17 @@ class ParticleFilter(object):
             else:
                 self.particles_posterior[key] = self.particles_prior[key].copy()
                 self.weights_posterior[key] = self.weights_prior[key].copy()
+
+            try:
+                next_key = self.index[idx + 1]
+            except IndexError:
+                self.particles_prior_final = self.T_fn[key](
+                    self.particles_posterior[key]
+                )
+            else:
+                self.particles_prior[next_key] = self.T_fn[key](
+                    self.particles_posterior[key]
+                )
 
     def __getattr__(self, name):
         """"""
@@ -128,3 +140,21 @@ class ParticleFilter(object):
         """"""
         result = sum(self.weights_prior[key] ** 2) ** -1
         return result
+
+    def calculate_weights(self, key, particles, prev_weights):
+        """"""
+        sigma2 = self.H[key] + self.P_prior[key]
+
+        weights = prev_weights * array(
+            [
+                exp(
+                    -0.5 * log(2 * PI)
+                    - 0.5 * log(sigma2)
+                    - 0.5 * (self.y[key] - self.Z_fn[key](x)) ** 2 / sigma2
+                )
+                for x in particles
+            ]
+        )
+        weights = weights / sum(weights)
+
+        return weights

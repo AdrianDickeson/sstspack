@@ -860,3 +860,54 @@ def plot_fig122(particle_model, gaussian_model):
 
     fig.tight_layout(rect=FIG_LAYOUT)
     fig.savefig("figures/fig12.2.pdf")
+
+
+def plot_fig123(particle_model, auxiliary_model):
+    """"""
+    fig, axs = plt.subplots(2, 2)
+    fig.suptitle("{} - Fig. 12.3".format(NILE_DATA_TITLE), fontsize=14)
+
+    ax = axs[0, 0]
+    ax.plot(
+        particle_model.index, particle_model.a_posterior, "b", label="Particle Filter"
+    )
+    ax.scatter(particle_model.index, particle_model.y, label="Data")
+    confidence90 = norm.ppf(0.95) * array([sqrt(x) for x in particle_model.P_posterior])
+    ax.plot(
+        particle_model.index,
+        particle_model.a_posterior + confidence90,
+        "k--",
+        label="90% conf.",
+    )
+    ax.plot(particle_model.index, particle_model.a_posterior - confidence90, "k--")
+    ax.legend()
+    ax.set_ylim((400, 1400))
+
+    ax = axs[0, 1]
+    ax.plot(particle_model.index, particle_model.ESS)
+    ax.set_ylim((0, 10000))
+
+    ax = axs[1, 0]
+    ax.plot(
+        auxiliary_model.index, auxiliary_model.a_posterior, "b", label="Particle Filter"
+    )
+    ax.scatter(auxiliary_model.index, auxiliary_model.y, label="Data")
+    confidence90 = norm.ppf(0.95) * array(
+        [sqrt(x) for x in auxiliary_model.P_posterior]
+    )
+    ax.plot(
+        auxiliary_model.index,
+        auxiliary_model.a_posterior + confidence90,
+        "k--",
+        label="90% conf.",
+    )
+    ax.plot(auxiliary_model.index, auxiliary_model.a_posterior - confidence90, "k--")
+    ax.legend()
+    ax.set_ylim((400, 1400))
+
+    ax = axs[1, 1]
+    ax.plot(auxiliary_model.index, auxiliary_model.ESS)
+    ax.set_ylim((0, 10000))
+
+    fig.tight_layout(rect=FIG_LAYOUT)
+    fig.savefig("figures/fig12.3.pdf")

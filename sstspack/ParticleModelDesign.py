@@ -1,11 +1,17 @@
 import pandas as pd
+import numpy as np
 
 import sstspack.GaussianModelDesign as md
 
 
-def identity(x):
+def identity_fn(x):
     """"""
     return x
+
+
+def identity_matrix(x):
+    """"""
+    return np.identity(x.shape[0])
 
 
 def get_local_level_particle_model_design(length_index, H, Q):
@@ -22,6 +28,12 @@ def get_local_level_particle_model_design(length_index, H, Q):
     H = H
     Q = Q
 
-    result = md.get_static_model_df(length_index, H=H, Q=Q, X=X)
+    Z_fn = identity_fn
+    T_fn = identity_fn
+    R_fn = identity_matrix
+
+    result = md.get_static_model_df(
+        length_index, H=H, Q=Q, X=X, Z_fn=Z_fn, T_fn=T_fn, R_fn=R_fn
+    )
 
     return result
