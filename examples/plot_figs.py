@@ -807,7 +807,7 @@ def figs12(axs, particle_model, gaussian_model):
     ax.plot(
         particle_model.index, particle_model.a_posterior, "b", label="Particle Filter"
     )
-    ax.scatter(particle_model.index, particle_model.y, label="Data")
+    ax.scatter(particle_model.index, particle_model.y, marker="x", label="Data")
     confidence90 = norm.ppf(0.95) * array([sqrt(x) for x in particle_model.P_posterior])
     ax.plot(
         particle_model.index,
@@ -871,7 +871,7 @@ def plot_fig123(particle_model, auxiliary_model):
     ax.plot(
         particle_model.index, particle_model.a_posterior, "b", label="Particle Filter"
     )
-    ax.scatter(particle_model.index, particle_model.y, label="Data")
+    ax.scatter(particle_model.index, particle_model.y, marker="x", label="Data")
     confidence90 = norm.ppf(0.95) * array([sqrt(x) for x in particle_model.P_posterior])
     ax.plot(
         particle_model.index,
@@ -891,7 +891,7 @@ def plot_fig123(particle_model, auxiliary_model):
     ax.plot(
         auxiliary_model.index, auxiliary_model.a_posterior, "b", label="Particle Filter"
     )
-    ax.scatter(auxiliary_model.index, auxiliary_model.y, label="Data")
+    ax.scatter(auxiliary_model.index, auxiliary_model.y, marker="x", label="Data")
     confidence90 = norm.ppf(0.95) * array(
         [sqrt(x) for x in auxiliary_model.P_posterior]
     )

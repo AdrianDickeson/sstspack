@@ -96,7 +96,7 @@ class ParticleFilter(object):
             self.ESS[key] = self.effective_sample_size(key)
 
             # Step 4: Calculate posterior particles
-            if self.ESS[key] < self.resample_level and not self.aux:
+            if self.ESS[key] < self.resample_level:
                 idx_resample = choice(
                     range(self.N), self.N, replace=True, p=self.weights_prior[key]
                 )
