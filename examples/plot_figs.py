@@ -7,9 +7,12 @@ from numpy.random import normal
 from sstspack import DynamicLinearGaussianModel as DLGM
 
 NILE_DATA_TITLE = "Volume of Nile river at Aswan 1871-1970"
-SEATBELT_DATA_TITLE = "Great Britain Road Accident Casulaties 1969-1984"
+SEATBELT_DATA_TITLE = "Great Britain Road Accident Casualties 1969-1984"
 BOX_JENKINS_DATA_TITLE = "Box-Jenkins modeling of internet user data"
 MOTORCYCLE_DATA_TITLE = "Simulated Motorcycle Acceleration Data"
+VAN_DATA_TITLE = "Van Road Accident Fatalities 1969-1984"
+GAS_DATA_TITLE = "UK Gas Consumption 1960-1986"
+EXCHANGE_RATE_DATA_TITLE = "USD/GBP Daily Returns"
 XLIM = (1868, 1973)
 XLABEL = "year"
 FIG_LAYOUT = [0, 0.03, 1, 0.95]
@@ -911,3 +914,46 @@ def plot_fig123(particle_model, auxiliary_model):
 
     fig.tight_layout(rect=FIG_LAYOUT)
     fig.savefig("figures/fig12.3.pdf")
+
+
+def plot_fig143(y_series, model):
+    """"""
+    fig, axs = plt.subplots(2, 1)
+    fig.suptitle("{} - Fig. 14.3".format(VAN_DATA_TITLE), fontsize=14)
+
+    ax = axs[0]
+    ax.plot(y_series.index, y_series)
+    ax.scatter(y_series.index, y_series)
+
+    fig.tight_layout(rect=FIG_LAYOUT)
+    fig.savefig("figures/fig14.3.pdf")
+
+
+def plot_fig144(gaussian_model, non_gaussian_model):
+    """"""
+    fig, axs = plt.subplots(2, 2)
+    fig.suptitle("{} - Fig. 14.4".format(GAS_DATA_TITLE), fontsize=14)
+
+    ax = axs[0, 0]
+    mask = array([0, 0, 1, 1, 1])
+    ax.plot(gaussian_model.aggregate_field("a_hat", mask))
+
+    ax = axs[1, 0]
+    ax.plot(gaussian_model.epsilon_hat)
+    ax.set_ylim((-0.4, 0.4))
+
+    fig.tight_layout(rect=FIG_LAYOUT)
+    fig.savefig("figures/fig14.4.pdf")
+
+
+def plot_fig145(y_series, transformed_series, model):
+    """"""
+    fig, axs = plt.subplots(3, 1)
+    fig.suptitle("{} - Fig. 14.5".format(GAS_DATA_TITLE), fontsize=14)
+
+    ax = axs[0]
+    ax.plot(y_series)
+
+    ax = axs[1]
+    ax.scatter(x=transformed_series.index, y=transformed_series, s=1)
+    ax.set_ylim((-30, 0))

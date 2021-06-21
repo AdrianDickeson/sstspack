@@ -3,7 +3,9 @@ from copy import copy
 
 from numpy import full, ones, zeros, identity, hstack, vstack, pi as PI, diag, block
 import pandas as pd
-from scipy.linalg.special_matrices import block_diag
+
+# from scipy.linalg.special_matrices import block_diag
+from sstspack.Utilities import block_diag
 
 
 # TODO: enable input of parameters as arrays
@@ -349,19 +351,21 @@ def combine_model_design(model_data_list):
 
     for row in result.index:
         result.Z[row] = hstack([df.Z[row] for df in model_data_list])
-        result.d[row] = sum([df.d[row] for df in model_data_list])
-        result.H[row] = sum([df.H[row] for df in model_data_list])
-        result.loc[row, "T"] = block_diag(*[df.loc[row, "T"] for df in model_data_list])
+        result.d[row] = sum(df.d[row] for df in model_data_list)
+        result.H[row] = sum(df.H[row] for df in model_data_list)
+        result.loc[:, "T"][row] = block_diag(
+            [df.loc[row, "T"] for df in model_data_list]
+        )
         result.c[row] = vstack([df.c[row] for df in model_data_list])
-        result.R[row] = block_diag(*[df.R[row] for df in model_data_list])
-        result.Q[row] = block_diag(*[df.Q[row] for df in model_data_list])
+        result.R[row] = block_diag([df.R[row] for df in model_data_list])
+        result.Q[row] = block_diag([df.Q[row] for df in model_data_list])
 
         retain_rv = [val != 0 for val in diag(result.Q[row])]
         m = result.Z[row].shape[1]
-        if all(not val for val in retain_rv):
+        if not any(retain_rv):
             result.R[row] = zeros((m, 1))
             result.Q[row] = zeros((1, 1))
-        elif any(not val for val in retain_rv):
+        elif not all(retain_rv):
             result.R[row] = result.R[row][:, retain_rv]
             result.Q[row] = result.Q[row][retain_rv, :]
             result.Q[row] = result.Q[row][:, retain_rv]
@@ -386,9 +390,9 @@ def process_terms(H, Z, d, Q, T, c, R):
     if q_len == 1:
         Z = vstack([Z] * p)
     else:
-        Z = block_diag(*[Z] * p)
-        T = block_diag(*[T] * q_len)
-        R = block_diag(*[R] * q_len)
+        Z = block_diag([Z] * p)
+        T = block_diag([T] * q_len)
+        R = block_diag([R] * q_len)
 
     d = vstack([d] * p)
     c = vstack([c] * q_len)
