@@ -916,6 +916,28 @@ def plot_fig123(particle_model, auxiliary_model):
     fig.savefig("figures/fig12.3.pdf")
 
 
+def plot_fig141(y_series, ylog_series):
+    """"""
+    fig, axs = plt.subplots(2, 1)
+
+    ax = axs[0]
+    ax.plot(y_series.index, y_series)
+    ax.set_ylabel("Visitors (thousands)")
+    ax.set_xticklabels(
+        [val if idx % 60 == 0 else "" for idx, val in enumerate(y_series.index)]
+    )
+
+    ax = axs[1]
+    ax.plot(ylog_series.index, ylog_series)
+    ax.set_ylabel("Log Visitors (thousands)")
+    ax.set_xticklabels(
+        [val if idx % 60 == 0 else "" for idx, val in enumerate(y_series.index)]
+    )
+
+    fig.tight_layout(rect=FIG_LAYOUT)
+    fig.savefig("figures/fig14.4.pdf")
+
+
 def plot_fig143(y_series, model):
     """"""
     fig, axs = plt.subplots(2, 1)
