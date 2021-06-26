@@ -86,7 +86,7 @@ def get_frequency_domain_seasonal_model_design(length_index, s, Q_list, H):
     except ValueError:
         pass
     p = H.shape[1]
-    for i in range(1, s / 2 + 1):
+    for i in range(1, int(s / 2 + 1)):
         Z, T, c, R, Q = frequency_domain_model_terms(i, s, omega, Q_list[i - 1])
         Z, d_i, H, T, c, R, Q = process_terms(H, Z, d, Q, T, c, R)
         submodel = get_static_model_df(

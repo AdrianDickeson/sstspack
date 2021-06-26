@@ -18,6 +18,7 @@ from numpy.linalg import inv
 from scipy.optimize import minimize
 
 from sstspack import DynamicLinearGaussianModel as DLGM
+from sstspack.Utilities import jacobian, hessian
 
 
 def parameter_transform_function(parameter_bounds):
@@ -199,61 +200,6 @@ def fit_model_max_likelihood(
 
     model = DLGM(y_series, model_data, a0, P0, diffuse_state)
     result.model = model
-
-    return result
-
-
-def jacobian(func, x, h=0.01, relative=True, *args):
-    """"""
-    result = zeros(x.shape)
-
-    for idx in range(len(x)):
-        dx = zeros(x.shape)
-        hx = x[idx] * h if relative else h
-        dx[idx] = hx
-
-        f1 = func(x + dx, *args)
-        f2 = func(x - dx, *args)
-        result[idx] = 0.5 * (f1 - f2) / hx
-
-    return result
-
-
-def hessian(func, x, h=1e-5, relative=False, *args):
-    """"""
-    len_x = len(x)
-    result = zeros((len_x, len_x))
-
-    for row in range(1, len_x):
-        for col in range(row):
-            dx = zeros(len_x)
-            dy = zeros(len_x)
-            if relative:
-                hx = h * x[col]
-                hy = h * x[row]
-            else:
-                hx = hy = h
-            dx[col] = hx
-            dy[row] = hy
-
-            f1 = func(x + dx + dy, *args)
-            f2 = func(x + dx - dy, *args)
-            f3 = func(x - dx + dy, *args)
-            f4 = func(x - dx - dy, *args)
-            result[row, col] = 0.25 * (f1 - f2 - f3 + f4) / hx / hy
-
-            result += result.T
-
-            for idx in range(len_x):
-                dx = zeros(len_x)
-                hx = h * x[idx] if relative else h
-                dx[idx] = hx
-
-                f1 = func(x + dx, *args)
-                f2 = func(x, *args)
-                f3 = func(x - dx, *args)
-
-                result[idx, idx] = (f1 - 2 * f2 + f3) / hx / hx
 
     return result
 
