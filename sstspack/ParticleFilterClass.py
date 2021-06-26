@@ -138,8 +138,7 @@ class ParticleFilter(object):
 
     def effective_sample_size(self, key):
         """"""
-        result = sum(self.weights_prior[key] ** 2) ** -1
-        return result
+        return sum(self.weights_prior[key] ** 2) ** -1
 
     def calculate_weights(self, key, particles, prev_weights):
         """"""

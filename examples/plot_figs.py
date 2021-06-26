@@ -40,8 +40,7 @@ def get_fig_data(ssmodel, state_col, error_col, confidence=0.9):
         "lower_state": lower_state,
         "upper_state": upper_state,
     }
-    result = pd.DataFrame(data_dict, index=x_vals)
-    return result
+    return pd.DataFrame(data_dict, index=x_vals)
 
 
 def plot_state(
@@ -184,16 +183,14 @@ def plot_correlogram(ax, correl_data, variance, title):
 def auto_covariance(data_series, lag):
     """"""
     shifted_data = data_series.shift(periods=lag)
-    result = (data_series * shifted_data).iloc[lag:].sum() / len(data_series)
-    return result
+    return (data_series * shifted_data).iloc[lag:].sum() / len(data_series)
 
 
 def auto_correlation(data_series, lag):
     """"""
     n = len(data_series)
     variance = data_series.apply(lambda x: x * x).sum() / n
-    result = auto_covariance(data_series, lag) / variance
-    return result
+    return auto_covariance(data_series, lag) / variance
 
 
 def plot_fig21(ssmodel):
@@ -476,7 +473,7 @@ def run_diagnostics(ssmodel):
 
     q = 9
     q_dict = {i: auto_correlation(forecast_errors, i) for i in range(1, q + 1)}
-    Q = n * (n + 2) * sum([q_dict[i] ** 2 / (n - i) for i in range(1, q + 1)])
+    Q = n * (n + 2) * sum(q_dict[i] ** 2 / (n - i) for i in range(1, q + 1))
 
     print("Diagnostic checks")
     print("=================\n")
@@ -689,16 +686,13 @@ def plot_fig87(model):
 def plot_with_missing_data(data, ax):
     """"""
     start_idx = None
-    curr_idx = 1
     data_idx_list = []
-    while curr_idx <= len(data):
-        if start_idx is None and not data[curr_idx] is pd.NA:
+    for curr_idx in range(1, len(data) + 1):
+        if start_idx is None and data[curr_idx] is not pd.NA:
             start_idx = curr_idx
         if data[curr_idx] is pd.NA and start_idx is not None:
             data_idx_list.append(list(range(start_idx, curr_idx)))
             start_idx = None
-        curr_idx += 1
-
     for plot_range in data_idx_list:
         ax.plot(plot_range, data[plot_range], "-b")
 

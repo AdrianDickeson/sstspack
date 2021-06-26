@@ -67,8 +67,7 @@ def inverse_parameter_transform_function(parameter_bounds):
         mid_point = lower_bound + half_range
         term1 = half_range ** 2 / (x - lower_bound - half_range) ** 2 - 1
         term2 = sqrt(term1 ** -1)
-        result = term2 if x >= mid_point else -term2
-        return result
+        return term2 if x >= mid_point else -term2
 
     if isinf(lower_bound) and isinf(upper_bound):
         return inverse_unconstrained
@@ -82,7 +81,7 @@ def inverse_parameter_transform_function(parameter_bounds):
 class FittedModel:
     def __repr__(self):
         return "\n".join(
-            ["{}:\t{}".format(key, self.__dict__[key]) for key in self.__dict__]
+            "{}:\t{}".format(key, self.__dict__[key]) for key in self.__dict__
         )
 
     def __str__(self):
@@ -93,7 +92,7 @@ class FittedModel:
         parameters = self.parameter_field_to_str(self.parameters)
         jacobian = self.parameter_field_to_str(self.jacobian)
 
-        result = """Maximum Likelihood Results
+        return """Maximum Likelihood Results
 --------------------------
 Maximum Log Likelihood Found: {:.5}{}
 Parameters:
@@ -109,8 +108,6 @@ Variance Matrix
             self.fisher_information_matrix,
         )
 
-        return result
-
     def parameter_field_to_str(self, field_data):
         """"""
         parameter_names = self.parameter_names
@@ -119,13 +116,10 @@ Variance Matrix
                 "Parameter {}".format(idx) for idx in range(len(self.parameters))
             ]
 
-        result = "\n".join(
-            [
-                "{}: {:.6}".format(parameter_names[idx], field_data[idx])
-                for idx in range(len(self.parameters))
-            ]
+        return "\n".join(
+            "{}: {:.6}".format(parameter_names[idx], field_data[idx])
+            for idx in range(len(self.parameters))
         )
-        return result
 
 
 def fit_model_max_likelihood(
@@ -146,7 +140,6 @@ def fit_model_max_likelihood(
         inverse_parameter_transform_function(params_bounds[idx])(value)
         for idx, value in enumerate(params0)
     ]
-    param_funcs = [parameter_transform_function(bounds) for bounds in params_bounds]
 
     def objective_func(transformed_params, y_series, model_template, dt):
         params = [
@@ -168,10 +161,7 @@ def fit_model_max_likelihood(
         method="BFGS",
         tol=1.0e-16,
     )
-    tparams = [
-        parameter_transform_function(params_bounds[idx])(value)
-        for idx, value in enumerate(res.x)
-    ]
+
     result = FittedModel()
     result.count_iteration = res.nit
     result.count_function_evaluations = res.nfev
@@ -182,16 +172,6 @@ def fit_model_max_likelihood(
             parameter_transform_function(params_bounds[idx])(value)
             for idx, value in enumerate(res.x)
         ]
-    )
-
-    jac = jacobian(
-        inner_objective_func,
-        domain_params,
-        1e-10,
-        False,
-        y_series,
-        model_template,
-        dt,
     )
 
     hess = hessian(
@@ -229,10 +209,7 @@ def jacobian(func, x, h=0.01, relative=True, *args):
 
     for idx in range(len(x)):
         dx = zeros(x.shape)
-        if relative:
-            hx = x[idx] * h
-        else:
-            hx = h
+        hx = x[idx] * h if relative else h
         dx[idx] = hx
 
         f1 = func(x + dx, *args)
@@ -269,10 +246,7 @@ def hessian(func, x, h=1e-5, relative=False, *args):
 
             for idx in range(len_x):
                 dx = zeros(len_x)
-                if relative:
-                    hx = h * x[idx]
-                else:
-                    hx = h
+                hx = h * x[idx] if relative else h
                 dx[idx] = hx
 
                 f1 = func(x + dx, *args)
@@ -286,14 +260,12 @@ def hessian(func, x, h=1e-5, relative=False, *args):
 
 def akaike_information_criterion(log_likelihood, dimension):
     """"""
-    result = 2 * dimension - 2 * log_likelihood
-    return result
+    return 2 * dimension - 2 * log_likelihood
 
 
 def bayesian_information_criterion(log_likelihood, dimension, n):
     """"""
-    result = dimension * log(n) - 2 * log_likelihood
-    return result
+    return dimension * log(n) - 2 * log_likelihood
 
 
 def correlation_matrix(anglar_coordenants):
@@ -311,8 +283,7 @@ def correlation_matrix(anglar_coordenants):
             else:
                 B[i, j] = prod([sin(x) for x in theta[i, :j]])
 
-    C = dot(B, B.T)
-    return C
+    return dot(B, B.T)
 
 
 def correlation_to_variance_matrix(correlation_matrix, variances):
@@ -320,9 +291,4 @@ def correlation_to_variance_matrix(correlation_matrix, variances):
     std_deviations = sqrt(variances)
     V = diag(std_deviations)
 
-    result = dot(dot(V, correlation_matrix), V)
-    return result
-
-
-if __name__ == "__main__":
-    pass
+    return dot(dot(V, correlation_matrix), V)

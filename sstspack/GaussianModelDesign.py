@@ -20,7 +20,7 @@ def get_local_level_model_design(length_index, Q, H, dt=None):
     Z, d, H, T, c, R, Q = process_terms(H, Z, d, Q, T, c, R)
     result = get_static_model_df(length_index, Z=Z, d=d, H=H, T=T, c=c, R=R, Q=Q)
 
-    if not dt is None:
+    if dt is not None:
         for i, idx in enumerate(result.index):
             result.Q[idx] = result.Q[idx] * dt[i]
 
@@ -40,7 +40,7 @@ def get_local_linear_trend_model_design(length_index, Q, H, dt=None):
     Z, d, H, T, c, R, Q = process_terms(H, Z, d, Q, T, c, R)
     result = get_static_model_df(length_index, Z=Z, d=d, H=H, T=T, c=c, R=R, Q=Q)
 
-    if not dt is None:
+    if dt is not None:
         for i, idx in enumerate(result.index):
             T = result.loc[idx, "T"]
             T[0, 1] = dt[i]
@@ -72,8 +72,7 @@ def get_time_domain_seasonal_model_design(length_index, s, sigma2_omega, H):
     c = zeros((s, 1))
 
     Z, d, H, T, c, R, Q = process_terms(H, Z, d, Q, T, c, R)
-    result = get_static_model_df(length_index, Z=Z, d=d, H=H, T=T, c=c, R=R, Q=Q)
-    return result
+    return get_static_model_df(length_index, Z=Z, d=d, H=H, T=T, c=c, R=R, Q=Q)
 
 
 def get_frequency_domain_seasonal_model_design(length_index, s, Q_list, H):
@@ -87,8 +86,7 @@ def get_frequency_domain_seasonal_model_design(length_index, s, Q_list, H):
     except ValueError:
         pass
     p = H.shape[1]
-    i = 1
-    while i <= s / 2:
+    for i in range(1, s / 2 + 1):
         Z, T, c, R, Q = frequency_domain_model_terms(i, s, omega, Q_list[i - 1])
         Z, d_i, H, T, c, R, Q = process_terms(H, Z, d, Q, T, c, R)
         submodel = get_static_model_df(
@@ -96,10 +94,7 @@ def get_frequency_domain_seasonal_model_design(length_index, s, Q_list, H):
         )
         submodels.append(submodel)
         H = zeros((p, p))
-        i += 1
-
-    result = combine_model_design(submodels)
-    return result
+    return combine_model_design(submodels)
 
 
 def frequency_domain_model_terms(i, s, omega, Q):
@@ -220,10 +215,9 @@ def get_ARIMA_x_SARIMA_model_design(
     Z[0, :] = difference_terms.copy()
 
     Z, d, H, T, c, R, Q = process_terms(H, Z, d, Q, T, c, R)
-    result = get_static_model_df(
+    return get_static_model_df(
         series_length_index, Z=Z, d=d_term, H=H, T=T, c=c, R=R, Q=Q
     )
-    return result
 
 
 def get_intervention_model_design(length_index, intervention_point, Q=0, H=0):
@@ -296,8 +290,7 @@ def get_time_varying_regression_model_design(length_index, regressors_df, Q, H):
         )
         submodels.append(get_static_model_df([idx], Z=Z, d=d, H=H, T=T, c=c, R=R, Q=Q))
 
-    result = pd.concat(submodels)
-    return result
+    return pd.concat(submodels)
 
 
 def get_static_model_df(length_index, **kwargs):
@@ -324,8 +317,8 @@ def get_static_model_df(length_index, **kwargs):
         result[key] = [kwargs[key]] * length
 
     adjustment_columns = ["Z", "d", "H"]
-    if (not y_timeseries is None) and all(
-        [col in result.columns for col in adjustment_columns]
+    if y_timeseries is not None and all(
+        col in result.columns for col in adjustment_columns
     ):
         for idx in index:
             p_model = result.Z[idx].shape[0]
