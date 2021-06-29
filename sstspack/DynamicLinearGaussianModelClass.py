@@ -11,6 +11,7 @@ from numpy import (
     sum,
     abs,
     sqrt,
+    full,
 )
 from numpy.linalg import inv, det, LinAlgError
 from numpy.random import multivariate_normal as mv_norm
@@ -42,6 +43,8 @@ class DynamicLinearGaussianModel(object):
         Constructor
         """
         self.model_data_df = model_parameters_df.copy()
+        self._validate_input_variables(y_series)
+
         self.model_data_df.insert(0, "y", y_series)
 
         estimation_columns = [
@@ -89,16 +92,50 @@ class DynamicLinearGaussianModel(object):
             columns=self.model_data_df.columns.tolist() + estimation_columns
         )
         self.model_data_df[estimation_columns] = pd.NA
-        self.p = pd.Series(
-            data=[self.Z[key].shape[0] for key in self.index],
-            index=self.model_data_df.index,
-        )
 
         self.set_up_initial_terms(a_prior_initial, P_prior_initial, diffuse_states)
 
         self.filter_run = False
         self.smoother_run = False
         self.disturbance_smoother_run = False
+
+    def _validate_input_variables(self, y_series):
+        """"""
+        # Verify y_series.index is a subset of self.index
+        assert all(idx in self.index for idx in y_series)
+
+        self._check_model_data_columns()
+
+        # Verify all data in matrix form
+        p = self.p
+        for idx in y_series.index:
+            if type(y_series[idx]) in (float, int):
+                y_series[idx] = full((1, 1), y_series[idx])
+            assert y_series[idx].shape == (p[idx], 1)
+
+        for idx in self.index:
+            verification_columns = {
+                "Z": (p[idx], self.m),
+                "d": (p[idx], 1),
+                "H": (p[idx], p[idx]),
+                "T": (self.m, self.m),
+                "c": (self.m, 1),
+                "R": (self.m, self.r),
+                "Q": (self.r, self.r),
+            }
+            for col in verification_columns:
+                if type(self.model_data_df.loc[idx, col]) in (float, int):
+                    self.model_data_df.loc[idx, col] = full(
+                        (1, 1), self.model_data_df.loc[idx, col]
+                    )
+                assert (
+                    self.model_data_df.loc[idx, col].shape == verification_columns[col]
+                )
+
+    def _check_model_data_columns(self):
+        """"""
+        expected_columns = ("y", "Z", "d", "H", "T", "c", "R", "Q")
+        assert all(col in self.model_data_df.columns for col in expected_columns)
 
     @property
     def index(self):
@@ -212,11 +249,18 @@ class DynamicLinearGaussianModel(object):
         """"""
         return self.Z[self.initial_index].shape[1]
 
-    #     @property
-    #     def p(self):
-    #         '''
-    #         '''
-    #         return [self.Z[key].shape[0] for key in self.index]
+    @property
+    def p(self):
+        """ """
+        return pd.Series(
+            data=[self.Z[key].shape[0] for key in self.index],
+            index=self.model_data_df.index,
+        )
+
+    @property
+    def r(self):
+        """"""
+        return self.R[self.initial_index].shape[1]
 
     def set_up_initial_terms(self, a_prior_initial, P_prior_initial, diffuse_states):
         """"""
