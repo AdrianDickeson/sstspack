@@ -12,6 +12,7 @@ from numpy import (
     abs,
     sqrt,
     full,
+    ndarray,
 )
 from numpy.linalg import inv, det, LinAlgError
 from numpy.random import multivariate_normal as mv_norm
@@ -43,7 +44,7 @@ class DynamicLinearGaussianModel(object):
         Constructor
         """
         self.model_data_df = model_parameters_df.copy()
-        self._validate_input_variables(y_series)
+        y_series = self._validate_input_variables(y_series)
 
         self.model_data_df.insert(0, "y", y_series)
 
@@ -101,16 +102,20 @@ class DynamicLinearGaussianModel(object):
 
     def _validate_input_variables(self, y_series):
         """"""
+        y_series = y_series.astype(object)
         # Verify y_series.index is a subset of self.index
-        assert all(idx in self.index for idx in y_series)
+        assert all(idx in self.index for idx in y_series.index)
 
         self._check_model_data_columns()
 
         # Verify all data in matrix form
         p = self.p
         for idx in y_series.index:
-            if type(y_series[idx]) in (float, int):
+            try:
                 y_series[idx] = full((1, 1), y_series[idx])
+            except ValueError:
+                pass
+
             assert y_series[idx].shape == (p[idx], 1)
 
         for idx in self.index:
@@ -120,21 +125,24 @@ class DynamicLinearGaussianModel(object):
                 "H": (p[idx], p[idx]),
                 "T": (self.m, self.m),
                 "c": (self.m, 1),
-                "R": (self.m, self.r),
-                "Q": (self.r, self.r),
+                "R": (self.m, self.r_eta),
+                "Q": (self.r_eta, self.r_eta),
             }
             for col in verification_columns:
-                if type(self.model_data_df.loc[idx, col]) in (float, int):
+                if type(self.model_data_df.loc[idx, col]) != ndarray:
                     self.model_data_df.loc[idx, col] = full(
                         (1, 1), self.model_data_df.loc[idx, col]
                     )
+
                 assert (
                     self.model_data_df.loc[idx, col].shape == verification_columns[col]
                 )
 
+        return y_series
+
     def _check_model_data_columns(self):
         """"""
-        expected_columns = ("y", "Z", "d", "H", "T", "c", "R", "Q")
+        expected_columns = ("Z", "d", "H", "T", "c", "R", "Q")
         assert all(col in self.model_data_df.columns for col in expected_columns)
 
     @property
@@ -258,7 +266,7 @@ class DynamicLinearGaussianModel(object):
         )
 
     @property
-    def r(self):
+    def r_eta(self):
         """"""
         return self.R[self.initial_index].shape[1]
 
