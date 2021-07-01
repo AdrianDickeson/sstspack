@@ -59,7 +59,7 @@ def plot_state(
     d1 = ax.scatter(
         x=ssmodel.y.index[missing_mask], y=ssmodel.y[missing_mask], marker="x", s=50.0
     )
-    (d2,) = ax.plot(state_data_df["est_state"], "r", linewidth=2.0, c="red")
+    (d2,) = ax.plot(state_data_df["est_state"], linewidth=2.0, c="red")
     ax.plot(state_data_df["upper_state"], "--", c="orange")
     ax.plot(state_data_df["lower_state"], "--", c="orange")
     d3 = ax.fill_between(
