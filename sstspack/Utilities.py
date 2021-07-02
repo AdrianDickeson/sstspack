@@ -72,3 +72,8 @@ def hessian(func, x, h=1e-5, relative=False, *args):
                 result[idx, idx] = (f1 - 2 * f2 + f3) / hx / hx
 
     return result
+
+
+def identity_fn(x):
+    """"""
+    return x

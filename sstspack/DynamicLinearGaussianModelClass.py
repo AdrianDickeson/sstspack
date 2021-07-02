@@ -32,6 +32,49 @@ class DynamicLinearGaussianModel(object):
     model_parameters_df : pandas.DataFrame
     """
 
+    expected_columns = ("Z", "d", "H", "T", "c", "R", "Q")
+    estimation_columns = [
+        "a_prior",
+        "a_posterior",
+        "P_prior",
+        "P_posterior",
+        "v",
+        "F",
+        "F_inverse",
+        "K",
+        "L",
+        "a_hat",
+        "r",
+        "N",
+        "V",
+        "epsilon_hat",
+        "epsilon_hat_sigma2",
+        "eta_hat",
+        "eta_hat_sigma2",
+        "u",
+        "D",
+        "P_star_prior",
+        "P_infinity_prior",
+        "M_star",
+        "M_infinity",
+        "F1",
+        "F2",
+        "K0",
+        "K1",
+        "L0",
+        "L1",
+        "P_star_posterior",
+        "P_infinity_posterior",
+        "F_star",
+        "F_infinity",
+        "r0",
+        "r1",
+        "N0",
+        "N1",
+        "N2",
+        "p",
+    ]
+
     def __init__(
         self,
         y_series,
@@ -43,62 +86,25 @@ class DynamicLinearGaussianModel(object):
         """
         Constructor
         """
+        self._m = None
         self.model_data_df = model_parameters_df.copy()
+
+        self._add_estimation_columns()
+        self._initialise_model_data(a_prior_initial)
+
         y_series = self._validate_input_variables(y_series)
 
         self.model_data_df.insert(0, "y", y_series)
 
-        estimation_columns = [
-            "a_prior",
-            "a_posterior",
-            "P_prior",
-            "P_posterior",
-            "v",
-            "F",
-            "F_inverse",
-            "K",
-            "L",
-            "a_hat",
-            "r",
-            "N",
-            "V",
-            "epsilon_hat",
-            "epsilon_hat_sigma2",
-            "eta_hat",
-            "eta_hat_sigma2",
-            "u",
-            "D",
-            "P_star_prior",
-            "P_infinity_prior",
-            "M_star",
-            "M_infinity",
-            "F1",
-            "F2",
-            "K0",
-            "K1",
-            "L0",
-            "L1",
-            "P_star_posterior",
-            "P_infinity_posterior",
-            "F_star",
-            "F_infinity",
-            "r0",
-            "r1",
-            "N0",
-            "N1",
-            "N2",
-            "p",
-        ]
-        self.model_data_df = self.model_data_df.reindex(
-            columns=self.model_data_df.columns.tolist() + estimation_columns
-        )
-        self.model_data_df[estimation_columns] = pd.NA
-
-        self.set_up_initial_terms(a_prior_initial, P_prior_initial, diffuse_states)
+        self._set_up_initial_terms(a_prior_initial, P_prior_initial, diffuse_states)
 
         self.filter_run = False
         self.smoother_run = False
         self.disturbance_smoother_run = False
+
+    def _initialise_model_data(self, a_prior_initial):
+        """"""
+        pass
 
     def _validate_input_variables(self, y_series):
         """"""
@@ -119,15 +125,7 @@ class DynamicLinearGaussianModel(object):
             assert y_series[idx].shape == (p[idx], 1)
 
         for idx in self.index:
-            verification_columns = {
-                "Z": (p[idx], self.m),
-                "d": (p[idx], 1),
-                "H": (p[idx], p[idx]),
-                "T": (self.m, self.m),
-                "c": (self.m, 1),
-                "R": (self.m, self.r_eta),
-                "Q": (self.r_eta, self.r_eta),
-            }
+            verification_columns = self._verification_columns(p, idx)
             for col in verification_columns:
                 if type(self.model_data_df.loc[idx, col]) != ndarray:
                     self.model_data_df.loc[idx, col] = full(
@@ -142,8 +140,26 @@ class DynamicLinearGaussianModel(object):
 
     def _check_model_data_columns(self):
         """"""
-        expected_columns = ("Z", "d", "H", "T", "c", "R", "Q")
-        assert all(col in self.model_data_df.columns for col in expected_columns)
+        assert all(col in self.model_data_df.columns for col in self.expected_columns)
+
+    def _add_estimation_columns(self):
+        """"""
+        self.model_data_df = self.model_data_df.reindex(
+            columns=self.model_data_df.columns.tolist() + self.estimation_columns
+        )
+        self.model_data_df[self.estimation_columns] = pd.NA
+
+    def _verification_columns(self, p, idx):
+        """"""
+        return {
+            "Z": (p[idx], self.m),
+            "d": (p[idx], 1),
+            "H": (p[idx], p[idx]),
+            "T": (self.m, self.m),
+            "c": (self.m, 1),
+            "R": (self.m, self.r_eta),
+            "Q": (self.r_eta, self.r_eta),
+        }
 
     @property
     def index(self):
@@ -255,7 +271,10 @@ class DynamicLinearGaussianModel(object):
     @property
     def m(self):
         """"""
-        return self.Z[self.initial_index].shape[1]
+        if self._m is None:
+            return self.Z[self.initial_index].shape[1]
+
+        return self._m
 
     @property
     def p(self):
@@ -270,8 +289,12 @@ class DynamicLinearGaussianModel(object):
         """"""
         return self.R[self.initial_index].shape[1]
 
-    def set_up_initial_terms(self, a_prior_initial, P_prior_initial, diffuse_states):
+    def _set_up_initial_terms(self, a_prior_initial, P_prior_initial, diffuse_states):
         """"""
+        assert (a_prior_initial is not None and P_prior_initial is not None) or (
+            diffuse_states is not None and all(diffuse_states)
+        )
+
         if diffuse_states is None or not any(diffuse_states):
             self.d_diffuse = -1
 

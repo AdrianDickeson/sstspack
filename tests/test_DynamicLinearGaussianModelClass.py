@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from numpy.testing import assert_array_equal
 
-from sstspack import DynamicLinearGaussianModel as DLGM, modeldesign as md
+from sstspack import DynamicLinearGaussianModel as DLGM, GaussianModelDesign as md
 
 
 class TestDynamicLinearGaussianModel(unittest.TestCase):
@@ -178,14 +178,14 @@ class TestDynamicLinearGaussianModel(unittest.TestCase):
         sim_df = local_model.simulate_smoother()
         self.assertAlmostEqual(
             sim_df["alpha"][0].ravel()[0] + sim_df["epsilon"][0].ravel()[0],
-            local_model.y[0],
+            local_model.y[0].ravel()[0],
         )
 
         local_model = self.GetDiffuseLocalModel()
         sim_df = local_model.simulate_smoother()
         self.assertAlmostEqual(
             sim_df["alpha"][0].ravel()[0] + sim_df["epsilon"][0].ravel()[0],
-            local_model.y[0],
+            local_model.y[0].ravel()[0],
         )
 
     def test_simulate_model(self):
@@ -328,14 +328,14 @@ class TestDynamicLinearGaussianModel(unittest.TestCase):
 
         a0 = 3 * np.ones((3, 1))
         P0 = 2 * np.identity(3)
-        ssm_data.set_up_initial_terms(a0, P0, None)
+        ssm_data._set_up_initial_terms(a0, P0, None)
         assert_array_equal(ssm_data.a_prior[0], a0)
         assert_array_equal(ssm_data.P_prior[0], P0)
         self.assertEqual(ssm_data.d_diffuse, -1)
 
         a0 = 4 * np.ones((3, 1))
         P0 = 5 * np.identity(3)
-        ssm_data.set_up_initial_terms(a0, P0, [False, False, False])
+        ssm_data._set_up_initial_terms(a0, P0, [False, False, False])
         assert_array_equal(ssm_data.a_prior[0], a0)
         assert_array_equal(ssm_data.P_prior[0], P0)
         self.assertEqual(ssm_data.d_diffuse, -1)
@@ -348,7 +348,7 @@ class TestDynamicLinearGaussianModel(unittest.TestCase):
         expected_P_star_prior[2, 2] = P0[2, 2]
         expected_P_prior_row = np.array([0, 0, P0[2, 2]])
         ssm_data.Z[ssm_data.initial_index] = np.ones((1, 3))
-        ssm_data.set_up_initial_terms(a0, P0, [True, True, False])
+        ssm_data._set_up_initial_terms(a0, P0, [True, True, False])
         assert_array_equal(ssm_data.a_prior[0], expected_a0)
         assert_array_equal(ssm_data.P_infinity_prior[0], expected_P_infinity_prior)
         assert_array_equal(ssm_data.P_star_prior[0], expected_P_star_prior)
@@ -365,7 +365,7 @@ class TestDynamicLinearGaussianModel(unittest.TestCase):
         expected_P_star_prior = np.zeros((3, 3))
         expected_P_star_prior[1:, 1:] = P0[1:, 1:]
         expected_P_prior_row = np.array([0, P0[1, 2], P0[2, 2]])
-        ssm_data.set_up_initial_terms(a0, P0, [True, False, False])
+        ssm_data._set_up_initial_terms(a0, P0, [True, False, False])
         assert_array_equal(ssm_data.a_prior[0], expected_a0)
         assert_array_equal(ssm_data.P_infinity_prior[0], expected_P_infinity_prior)
         assert_array_equal(ssm_data.P_star_prior[0], expected_P_star_prior)
@@ -377,7 +377,7 @@ class TestDynamicLinearGaussianModel(unittest.TestCase):
         expected_a0 = np.zeros((3, 1))
         expected_P_infinity_prior = np.identity(3)
         expected_P_star_prior = np.zeros((3, 3))
-        ssm_data.set_up_initial_terms(a0, P0, [True, True, True])
+        ssm_data._set_up_initial_terms(a0, P0, [True, True, True])
         assert_array_equal(ssm_data.a_prior[0], expected_a0)
         assert_array_equal(ssm_data.P_infinity_prior[0], expected_P_infinity_prior)
         assert_array_equal(ssm_data.P_star_prior[0], expected_P_star_prior)

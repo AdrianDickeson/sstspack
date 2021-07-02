@@ -2,11 +2,7 @@ import pandas as pd
 import numpy as np
 
 import sstspack.GaussianModelDesign as md
-
-
-def identity_fn(x):
-    """"""
-    return x
+from sstspack.Utilities import identity_fn
 
 
 def identity_matrix(x):
