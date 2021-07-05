@@ -44,7 +44,9 @@ if __name__ == "__main__":
     forecast_ssm.filter()
     print("finished")
 
+    print()
     pf.run_diagnostics(ssm)
+    print()
 
     print("Producing figures... ", end="")
     pf.plot_fig21(ssm)

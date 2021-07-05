@@ -100,8 +100,12 @@ if __name__ == "__main__":
     extended_model = EKF(
         y_series, extended_model_design, a_prior_initial, P_prior_initial
     )
+    extended_model.filter()
 
     # plot_figs.plot_fig141(y_series, ylog_series)
 
-    # plt.show()
+    fig, ax = plt.subplots(1)
+    ax.plot(extended_model.index, extended_model.Z)
+
+    plt.show()
     print("Finished")

@@ -34,6 +34,10 @@ class DynamicLinearGaussianModel(object):
 
     expected_columns = ("Z", "d", "H", "T", "c", "R", "Q")
     estimation_columns = [
+        "y_original",
+        "Z_original",
+        "d_original",
+        "H_original",
         "a_prior",
         "a_posterior",
         "P_prior",
@@ -82,6 +86,7 @@ class DynamicLinearGaussianModel(object):
         a_prior_initial,
         P_prior_initial,
         diffuse_states=None,
+        validate_input=True,
     ):
         """
         Constructor
@@ -92,7 +97,8 @@ class DynamicLinearGaussianModel(object):
         self._add_estimation_columns()
         self._initialise_model_data(a_prior_initial)
 
-        y_series = self._validate_input_variables(y_series)
+        if validate_input:
+            y_series = self._validate_input_variables(y_series)
 
         self.model_data_df.insert(0, "y", y_series)
 
@@ -127,11 +133,12 @@ class DynamicLinearGaussianModel(object):
         for idx in self.index:
             verification_columns = self._verification_columns(p, idx)
             for col in verification_columns:
-                if type(self.model_data_df.loc[idx, col]) != ndarray:
+                try:
+                    _ = self.model_data_df.loc[idx, col].shape
+                except AttributeError:
                     self.model_data_df.loc[idx, col] = full(
                         (1, 1), self.model_data_df.loc[idx, col]
                     )
-
                 assert (
                     self.model_data_df.loc[idx, col].shape == verification_columns[col]
                 )
@@ -324,6 +331,12 @@ class DynamicLinearGaussianModel(object):
     def adapt_row_to_any_missing_data(self, row):
         """"""
         v_shape = (self.p[row], 1)
+        if self.is_partial_missing(self.y[row]):
+            self.y_original[row] = self.y[row].copy()
+            self.Z_original[row] = self.Z[row].copy()
+            self.d_original[row] = self.d[row].copy()
+            self.H_original[row] = self.H[row].copy()
+
         if self.is_all_missing(self.y[row]):
             self.Z[row] = zeros(self.Z[row].shape)
             self.v[row] = zeros(v_shape)
@@ -335,22 +348,19 @@ class DynamicLinearGaussianModel(object):
                 self.Z[row] = dot(W, self.Z[row])
                 self.d[row] = dot(W, self.d[row])
                 self.H[row] = dot(dot(W, self.H[row]), W.T)
-                self.p[row] = self.Z[row].shape[0]
-            self.v[row] = (
-                self.y[row] - dot(self.Z[row], self.a_prior[row]) - self.d[row]
-            )
 
     def filter(self):
         """
         Perform the Kalman filter with the y data series and the model design
         """
         for index, key in enumerate(self.index):
-            PZ = dot(self.P_prior[key], self.Z[key].T)
-            self.F[key] = dot(self.Z[key], PZ) + self.H[key]
+            self._initialise_parameters(key)
+            self._non_missing_F(key)
             self.adapt_row_to_any_missing_data(key)
 
+            # TODO: Deal with multivariate data
             if index <= self.d_diffuse:
-                # TODO: Deal with multivariate data
+                self.v[key] = self._prediction_error(key)
                 self.F_infinity[key] = dot(
                     dot(self.Z[key], self.P_infinity_prior[key]), self.Z[key].T
                 )
@@ -400,21 +410,14 @@ class DynamicLinearGaussianModel(object):
 
                 if all(abs(ravel(self.P_infinity_posterior[key])) <= EPSILON):
                     self.d_diffuse = index
+
+                RQR = dot(dot(self.R[key], self.Q[key]), self.R[key].T)
+                a_prior_next = dot(self.T[key], self.a_posterior[key]) + self.c[key]
+                P_prior_next = (
+                    dot(dot(self.T[key], self.P_posterior[key]), self.T[key].T) + RQR
+                )
             else:
-                PZ = dot(self.P_prior[key], self.Z[key].T)
-                F = dot(self.Z[key], PZ) + self.H[key]
-                try:
-                    self.F_inverse[key] = inv(F)
-                except LinAlgError:
-                    self.F_inverse[key] = 0
-                PZF_inv = dot(PZ, self.F_inverse[key])
-
-                self.a_posterior[key] = self.a_prior[key] + dot(PZF_inv, self.v[key])
-                self.P_posterior[key] = self.P_prior[key] - dot(PZF_inv, PZ.T)
-
-            RQR = dot(dot(self.R[key], self.Q[key]), self.R[key].T)
-            a_prior = dot(self.T[key], self.a_posterior[key]) + self.c[key]
-            P_prior = dot(dot(self.T[key], self.P_posterior[key]), self.T[key].T) + RQR
+                a_prior_next, P_prior_next = self._filter_recursion_step(key)
 
             if index < self.d_diffuse:
                 P_infinity_prior = dot(
@@ -424,26 +427,59 @@ class DynamicLinearGaussianModel(object):
                     dot(dot(self.T[key], self.P_star_posterior[key]), self.T[key].T)
                     + RQR
                 )
-                P_prior = self.diffuse_P(P_star_prior, P_infinity_prior)
+                P_prior_next = self.diffuse_P(P_star_prior, P_infinity_prior)
 
             nxt_idx = index + 1
             try:
                 nxt_key = self.index[nxt_idx]
             except IndexError:
-                self.a_prior_final = a_prior
-                self.P_prior_final = P_prior
+                self.a_prior_final = a_prior_next
+                self.P_prior_final = P_prior_next
                 if index < self.d_diffuse:
                     self.P_infinity_prior_final = P_infinity_prior
                     self.P_star_prior_final = P_star_prior
                     # TODO: Warn user distribution is still diffuse
             else:
-                self.a_prior[nxt_key] = a_prior
-                self.P_prior[nxt_key] = P_prior
+                self.a_prior[nxt_key] = a_prior_next
+                self.P_prior[nxt_key] = P_prior_next
                 if index < self.d_diffuse:
                     self.P_infinity_prior[nxt_key] = P_infinity_prior
                     self.P_star_prior[nxt_key] = P_star_prior
 
         self.filter_run = True
+
+    def _prediction_error(self, key):
+        """"""
+        return self.y[key] - dot(self.Z[key], self.a_prior[key]) - self.d[key]
+
+    def _initialise_parameters(self, key):
+        """"""
+        pass
+
+    def _non_missing_F(self, key):
+        """"""
+        PZ = dot(self.P_prior[key], self.Z[key].T)
+        self.F[key] = dot(self.Z[key], PZ) + self.H[key]
+
+    def _filter_recursion_step(self, key):
+        """"""
+        self.v[key] = self._prediction_error(key)
+        PZ = dot(self.P_prior[key], self.Z[key].T)
+        F = dot(self.Z[key], PZ) + self.H[key]
+        try:
+            self.F_inverse[key] = inv(F)
+        except LinAlgError:
+            self.F_inverse[key] = 0
+        PZF_inv = dot(PZ, self.F_inverse[key])
+
+        self.a_posterior[key] = self.a_prior[key] + dot(PZF_inv, self.v[key])
+        self.P_posterior[key] = self.P_prior[key] - dot(PZF_inv, PZ.T)
+
+        RQR = dot(dot(self.R[key], self.Q[key]), self.R[key].T)
+        a_prior_next = dot(self.T[key], self.a_posterior[key]) + self.c[key]
+        P_prior_next = dot(dot(self.T[key], self.P_posterior[key]), self.T[key].T) + RQR
+
+        return a_prior_next, P_prior_next
 
     def smoother(self):
         """"""

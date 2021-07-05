@@ -12,8 +12,8 @@ from example_internet_data import read_internet_data, get_ARMA_model_function
 
 
 def nile_local_level_model(parameters, model_template, y_timeseries, dt):
-    model_template.H = parameters[0]
-    model_template.Q = parameters[1]
+    model_template.H = [full((1, 1), parameters[0])] * len(model_template)
+    model_template.Q = [full((1, 1), parameters[1])] * len(model_template)
     return model_template
 
 
@@ -32,7 +32,7 @@ def get_seatbelt_model_template(y_timeseries):
 
 
 def seatbelt_seasonal_model(parameters, model_template, y_timeseries, dt):
-    H = parameters[0]
+    H = full((1, 1), parameters[0])
     Q_local = parameters[1]
     Q_seasonal = parameters[2]
     Q_full = identity(12)

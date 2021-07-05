@@ -21,16 +21,22 @@ def block_diag(matrix_list):
 
 def jacobian(func, x, h=0.01, relative=True, *args):
     """"""
-    result = zeros(x.shape)
+    y = func(x)
+    result = zeros((len(y), len(x)))
 
-    for idx in range(len(x)):
-        dx = zeros(x.shape)
-        hx = x[idx] * h if relative else h
-        dx[idx] = hx
+    for row in range(len(y)):
 
-        f1 = func(x + dx, *args)
-        f2 = func(x - dx, *args)
-        result[idx] = 0.5 * (f1 - f2) / hx
+        def row_func(x):
+            return func(x)[row]
+
+        for idx in range(len(x)):
+            dx = zeros(x.shape)
+            hx = x[idx] * h if relative else h
+            dx[idx] = hx
+
+            f1 = row_func(x + dx, *args)
+            f2 = row_func(x - dx, *args)
+            result[row, idx] = 0.5 * (f1 - f2) / hx
 
     return result
 
