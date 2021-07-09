@@ -1,5 +1,3 @@
-from math import sin, cos
-
 from numpy import (
     exp,
     sqrt,
@@ -13,6 +11,8 @@ from numpy import (
     reshape,
     prod,
     diag,
+    sin,
+    cos,
 )
 from numpy.linalg import inv
 from scipy.optimize import minimize
@@ -134,6 +134,7 @@ def fit_model_max_likelihood(
     model_template=None,
     parameter_names=None,
     dt=None,
+    model_class=DLGM,
 ):
     """"""
     n = len(y_series)
@@ -151,7 +152,9 @@ def fit_model_max_likelihood(
 
     def inner_objective_func(params, y_series, model_template, dt):
         model_data = model_func(params, model_template, y_series, dt)
-        model = DLGM(y_series, model_data, a0, P0, diffuse_state, validate_input=False)
+        model = model_class(
+            y_series, model_data, a0, P0, diffuse_state, validate_input=False
+        )
         return -model.log_likelihood()
 
     res = minimize(

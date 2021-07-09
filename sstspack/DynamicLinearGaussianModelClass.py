@@ -82,7 +82,7 @@ class DynamicLinearGaussianModel(object):
     def __init__(
         self,
         y_series,
-        model_parameters_df,
+        model_design_df,
         a_prior_initial,
         P_prior_initial,
         diffuse_states=None,
@@ -92,7 +92,7 @@ class DynamicLinearGaussianModel(object):
         Constructor
         """
         self._m = None
-        self.model_data_df = model_parameters_df.copy()
+        self.model_data_df = model_design_df.copy()
 
         self._add_estimation_columns()
         self._initialise_model_data(a_prior_initial)
@@ -360,74 +360,80 @@ class DynamicLinearGaussianModel(object):
 
             # TODO: Deal with multivariate data
             if index <= self.d_diffuse:
-                self.v[key] = self._prediction_error(key)
-                self.F_infinity[key] = dot(
-                    dot(self.Z[key], self.P_infinity_prior[key]), self.Z[key].T
-                )
-                self.F_star[key] = (
-                    dot(dot(self.Z[key], self.P_star_prior[key]), self.Z[key].T)
-                    + self.H[key]
-                )
+                # self.v[key] = self._prediction_error(key)
+                # self.F_infinity[key] = dot(
+                #     dot(self.Z[key], self.P_infinity_prior[key]), self.Z[key].T
+                # )
+                # self.F_star[key] = (
+                #     dot(dot(self.Z[key], self.P_star_prior[key]), self.Z[key].T)
+                #     + self.H[key]
+                # )
 
-                self.M_infinity[key] = dot(self.P_infinity_prior[key], self.Z[key].T)
-                self.M_star[key] = dot(self.P_star_prior[key], self.Z[key].T)
+                # self.M_infinity[key] = dot(self.P_infinity_prior[key], self.Z[key].T)
+                # self.M_star[key] = dot(self.P_star_prior[key], self.Z[key].T)
 
-                try:
-                    self.F1[key] = inv(self.F_infinity[key])
-                except LinAlgError:
-                    F = self.F_star[key].copy()
-                    self.F_inverse[key] = inv(F)
+                # try:
+                #     self.F1[key] = inv(self.F_infinity[key])
+                # except LinAlgError:
+                #     F = self.F_star[key].copy()
+                #     self.F_inverse[key] = inv(F)
 
-                    K0_hat = dot(self.M_star[key], self.F_inverse[key])
-                    K1_hat = zeros((self.m, self.Z[key].shape[0]))
-                else:
-                    self.F2[key] = -1 * dot(
-                        dot(self.F1[key], self.F_star[key]), self.F1[key]
-                    )
+                #     K0_hat = dot(self.M_star[key], self.F_inverse[key])
+                #     K1_hat = zeros((self.m, self.Z[key].shape[0]))
+                # else:
+                #     self.F2[key] = -1 * dot(
+                #         dot(self.F1[key], self.F_star[key]), self.F1[key]
+                #     )
 
-                    K0_hat = dot(self.M_infinity[key], self.F1[key])
-                    K1_hat = dot(self.M_star[key], self.F1[key]) + dot(
-                        self.M_infinity[key], self.F2[key]
-                    )
-                self.K0[key] = dot(self.T[key], K0_hat)
-                self.K1[key] = dot(self.T[key], K1_hat)
+                #     K0_hat = dot(self.M_infinity[key], self.F1[key])
+                #     K1_hat = dot(self.M_star[key], self.F1[key]) + dot(
+                #         self.M_infinity[key], self.F2[key]
+                #     )
+                # self.K0[key] = dot(self.T[key], K0_hat)
+                # self.K1[key] = dot(self.T[key], K1_hat)
 
-                L0_hat = identity(self.m) - dot(K0_hat, self.Z[key])
-                L1_hat = -1 * dot(K1_hat, self.Z[key])
-                self.L0[key] = dot(self.T[key], L0_hat)
-                self.L1[key] = dot(self.T[key], L1_hat)
+                # L0_hat = identity(self.m) - dot(K0_hat, self.Z[key])
+                # L1_hat = -1 * dot(K1_hat, self.Z[key])
+                # self.L0[key] = dot(self.T[key], L0_hat)
+                # self.L1[key] = dot(self.T[key], L1_hat)
 
-                self.a_posterior[key] = self.a_prior[key] + dot(K0_hat, self.v[key])
-                self.P_infinity_posterior[key] = dot(
-                    self.P_infinity_prior[key], L0_hat.T
-                )
-                self.P_star_posterior[key] = dot(
-                    self.P_infinity_prior[key], L1_hat.T
-                ) + dot(self.P_star_prior[key], L0_hat.T)
-                self.P_posterior[key] = self.diffuse_P(
-                    self.P_star_posterior[key], self.P_infinity_posterior[key]
-                )
+                # self.a_posterior[key] = self.a_prior[key] + dot(K0_hat, self.v[key])
+                # self.P_infinity_posterior[key] = dot(
+                #     self.P_infinity_prior[key], L0_hat.T
+                # )
+                # self.P_star_posterior[key] = dot(
+                #     self.P_infinity_prior[key], L1_hat.T
+                # ) + dot(self.P_star_prior[key], L0_hat.T)
+                # self.P_posterior[key] = self.diffuse_P(
+                #     self.P_star_posterior[key], self.P_infinity_posterior[key]
+                # )
 
-                if all(abs(ravel(self.P_infinity_posterior[key])) <= EPSILON):
-                    self.d_diffuse = index
+                # if all(abs(ravel(self.P_infinity_posterior[key])) <= EPSILON):
+                #     self.d_diffuse = index
 
-                RQR = dot(dot(self.R[key], self.Q[key]), self.R[key].T)
-                a_prior_next = dot(self.T[key], self.a_posterior[key]) + self.c[key]
-                P_prior_next = (
-                    dot(dot(self.T[key], self.P_posterior[key]), self.T[key].T) + RQR
-                )
+                # RQR = dot(dot(self.R[key], self.Q[key]), self.R[key].T)
+                # a_prior_next = dot(self.T[key], self.a_posterior[key]) + self.c[key]
+                # P_prior_next = (
+                #     dot(dot(self.T[key], self.P_posterior[key]), self.T[key].T) + RQR
+                # )
+                (
+                    a_prior_next,
+                    P_prior_next,
+                    P_infinity_prior,
+                    P_star_prior,
+                ) = self._diffuse_filter_recursion_step(key, index)
             else:
                 a_prior_next, P_prior_next = self._filter_recursion_step(key)
 
-            if index < self.d_diffuse:
-                P_infinity_prior = dot(
-                    dot(self.T[key], self.P_infinity_posterior[key]), self.T[key].T
-                )
-                P_star_prior = (
-                    dot(dot(self.T[key], self.P_star_posterior[key]), self.T[key].T)
-                    + RQR
-                )
-                P_prior_next = self.diffuse_P(P_star_prior, P_infinity_prior)
+            # if index < self.d_diffuse:
+            # P_infinity_prior = dot(
+            #     dot(self.T[key], self.P_infinity_posterior[key]), self.T[key].T
+            # )
+            # P_star_prior = (
+            #     dot(dot(self.T[key], self.P_star_posterior[key]), self.T[key].T)
+            #     + RQR
+            # )
+            # P_prior_next = self.diffuse_P(P_star_prior, P_infinity_prior)
 
             nxt_idx = index + 1
             try:
@@ -460,6 +466,68 @@ class DynamicLinearGaussianModel(object):
         """"""
         PZ = dot(self.P_prior[key], self.Z[key].T)
         self.F[key] = dot(self.Z[key], PZ) + self.H[key]
+
+    def _diffuse_filter_recursion_step(self, key, index):
+        """"""
+        self.v[key] = self._prediction_error(key)
+        self.F_infinity[key] = dot(
+            dot(self.Z[key], self.P_infinity_prior[key]), self.Z[key].T
+        )
+        self.F_star[key] = (
+            dot(dot(self.Z[key], self.P_star_prior[key]), self.Z[key].T) + self.H[key]
+        )
+
+        self.M_infinity[key] = dot(self.P_infinity_prior[key], self.Z[key].T)
+        self.M_star[key] = dot(self.P_star_prior[key], self.Z[key].T)
+
+        try:
+            self.F1[key] = inv(self.F_infinity[key])
+        except LinAlgError:
+            F = self.F_star[key].copy()
+            self.F_inverse[key] = inv(F)
+
+            K0_hat = dot(self.M_star[key], self.F_inverse[key])
+            K1_hat = zeros((self.m, self.Z[key].shape[0]))
+        else:
+            self.F2[key] = -1 * dot(dot(self.F1[key], self.F_star[key]), self.F1[key])
+
+            K0_hat = dot(self.M_infinity[key], self.F1[key])
+            K1_hat = dot(self.M_star[key], self.F1[key]) + dot(
+                self.M_infinity[key], self.F2[key]
+            )
+        self.K0[key] = dot(self.T[key], K0_hat)
+        self.K1[key] = dot(self.T[key], K1_hat)
+
+        L0_hat = identity(self.m) - dot(K0_hat, self.Z[key])
+        L1_hat = -1 * dot(K1_hat, self.Z[key])
+        self.L0[key] = dot(self.T[key], L0_hat)
+        self.L1[key] = dot(self.T[key], L1_hat)
+
+        self.a_posterior[key] = self.a_prior[key] + dot(K0_hat, self.v[key])
+        self.P_infinity_posterior[key] = dot(self.P_infinity_prior[key], L0_hat.T)
+        self.P_star_posterior[key] = dot(self.P_infinity_prior[key], L1_hat.T) + dot(
+            self.P_star_prior[key], L0_hat.T
+        )
+        self.P_posterior[key] = self.diffuse_P(
+            self.P_star_posterior[key], self.P_infinity_posterior[key]
+        )
+
+        if all(abs(ravel(self.P_infinity_posterior[key])) <= EPSILON):
+            self.d_diffuse = index
+
+        RQR = dot(dot(self.R[key], self.Q[key]), self.R[key].T)
+        a_prior_next = dot(self.T[key], self.a_posterior[key]) + self.c[key]
+        P_prior_next = dot(dot(self.T[key], self.P_posterior[key]), self.T[key].T) + RQR
+
+        P_infinity_prior = dot(
+            dot(self.T[key], self.P_infinity_posterior[key]), self.T[key].T
+        )
+        P_star_prior = (
+            dot(dot(self.T[key], self.P_star_posterior[key]), self.T[key].T) + RQR
+        )
+        P_prior_next = self.diffuse_P(P_star_prior, P_infinity_prior)
+
+        return a_prior_next, P_prior_next, P_infinity_prior, P_star_prior
 
     def _filter_recursion_step(self, key):
         """"""
