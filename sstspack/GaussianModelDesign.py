@@ -322,7 +322,10 @@ def get_static_model_df(length_index, **kwargs):
     ):
         for idx in index:
             p_model = result.Z[idx].shape[0]
-            p_series = len(y_timeseries[idx])
+            try:
+                p_series = len(y_timeseries[idx])
+            except TypeError:
+                p_series = 1
             p_diff = p_series - p_model
 
             if p_series > p_model:

@@ -116,7 +116,9 @@ class DynamicLinearGaussianModel(object):
         """"""
         y_series = y_series.astype(object)
         # Verify y_series.index is a subset of self.index
-        assert all(idx in self.index for idx in y_series.index)
+        assert all(
+            idx in self.index for idx in y_series.index
+        ), f"Elements of y_series.index are not in model_design.index, elements missing: (y_series.index[y_series.index not in self.index])"
 
         self._check_model_data_columns()
 
@@ -140,7 +142,8 @@ class DynamicLinearGaussianModel(object):
                         (1, 1), self.model_data_df.loc[idx, col]
                     )
                 assert (
-                    self.model_data_df.loc[idx, col].shape == verification_columns[col]
+                    self.model_data_df.loc[idx, col].shape == verification_columns[col],
+                    f"model_data_df.{col}[{idx}].shape has dimension {self.model_data_df.loc[idx, col].shape}, expected: {verification_columns[col]}",
                 )
 
         return y_series
@@ -360,62 +363,6 @@ class DynamicLinearGaussianModel(object):
 
             # TODO: Deal with multivariate data
             if index <= self.d_diffuse:
-                # self.v[key] = self._prediction_error(key)
-                # self.F_infinity[key] = dot(
-                #     dot(self.Z[key], self.P_infinity_prior[key]), self.Z[key].T
-                # )
-                # self.F_star[key] = (
-                #     dot(dot(self.Z[key], self.P_star_prior[key]), self.Z[key].T)
-                #     + self.H[key]
-                # )
-
-                # self.M_infinity[key] = dot(self.P_infinity_prior[key], self.Z[key].T)
-                # self.M_star[key] = dot(self.P_star_prior[key], self.Z[key].T)
-
-                # try:
-                #     self.F1[key] = inv(self.F_infinity[key])
-                # except LinAlgError:
-                #     F = self.F_star[key].copy()
-                #     self.F_inverse[key] = inv(F)
-
-                #     K0_hat = dot(self.M_star[key], self.F_inverse[key])
-                #     K1_hat = zeros((self.m, self.Z[key].shape[0]))
-                # else:
-                #     self.F2[key] = -1 * dot(
-                #         dot(self.F1[key], self.F_star[key]), self.F1[key]
-                #     )
-
-                #     K0_hat = dot(self.M_infinity[key], self.F1[key])
-                #     K1_hat = dot(self.M_star[key], self.F1[key]) + dot(
-                #         self.M_infinity[key], self.F2[key]
-                #     )
-                # self.K0[key] = dot(self.T[key], K0_hat)
-                # self.K1[key] = dot(self.T[key], K1_hat)
-
-                # L0_hat = identity(self.m) - dot(K0_hat, self.Z[key])
-                # L1_hat = -1 * dot(K1_hat, self.Z[key])
-                # self.L0[key] = dot(self.T[key], L0_hat)
-                # self.L1[key] = dot(self.T[key], L1_hat)
-
-                # self.a_posterior[key] = self.a_prior[key] + dot(K0_hat, self.v[key])
-                # self.P_infinity_posterior[key] = dot(
-                #     self.P_infinity_prior[key], L0_hat.T
-                # )
-                # self.P_star_posterior[key] = dot(
-                #     self.P_infinity_prior[key], L1_hat.T
-                # ) + dot(self.P_star_prior[key], L0_hat.T)
-                # self.P_posterior[key] = self.diffuse_P(
-                #     self.P_star_posterior[key], self.P_infinity_posterior[key]
-                # )
-
-                # if all(abs(ravel(self.P_infinity_posterior[key])) <= EPSILON):
-                #     self.d_diffuse = index
-
-                # RQR = dot(dot(self.R[key], self.Q[key]), self.R[key].T)
-                # a_prior_next = dot(self.T[key], self.a_posterior[key]) + self.c[key]
-                # P_prior_next = (
-                #     dot(dot(self.T[key], self.P_posterior[key]), self.T[key].T) + RQR
-                # )
                 (
                     a_prior_next,
                     P_prior_next,
@@ -424,16 +371,6 @@ class DynamicLinearGaussianModel(object):
                 ) = self._diffuse_filter_recursion_step(key, index)
             else:
                 a_prior_next, P_prior_next = self._filter_recursion_step(key)
-
-            # if index < self.d_diffuse:
-            # P_infinity_prior = dot(
-            #     dot(self.T[key], self.P_infinity_posterior[key]), self.T[key].T
-            # )
-            # P_star_prior = (
-            #     dot(dot(self.T[key], self.P_star_posterior[key]), self.T[key].T)
-            #     + RQR
-            # )
-            # P_prior_next = self.diffuse_P(P_star_prior, P_infinity_prior)
 
             nxt_idx = index + 1
             try:
