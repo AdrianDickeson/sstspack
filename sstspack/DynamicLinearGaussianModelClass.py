@@ -343,21 +343,18 @@ class DynamicLinearGaussianModel(object):
         if self.is_all_missing(self.y[row]):
             self.Z[row] = zeros(self.Z[row].shape)
             self.v[row] = zeros(v_shape)
-            self.p[row] = 0
-        else:
-            if self.is_partial_missing(self.y[row]):
-                W = self.remove_missing_rows(identity(self.p[row]), self.y[row])
-                self.y[row] = self.remove_missing_rows(self.y[row], self.y[row])
-                self.Z[row] = dot(W, self.Z[row])
-                self.d[row] = dot(W, self.d[row])
-                self.H[row] = dot(dot(W, self.H[row]), W.T)
+        elif self.is_partial_missing(self.y[row]):
+            W = self.remove_missing_rows(identity(self.p[row]), self.y[row])
+            self.y[row] = self.remove_missing_rows(self.y[row], self.y[row])
+            self.Z[row] = dot(W, self.Z[row])
+            self.d[row] = dot(W, self.d[row])
+            self.H[row] = dot(dot(W, self.H[row]), W.T)
 
     def filter(self):
         """
         Perform the Kalman filter with the y data series and the model design
         """
         for index, key in enumerate(self.index):
-            self._initialise_parameters(key)
             self._non_missing_F(key)
             self.adapt_row_to_any_missing_data(key)
 
@@ -393,11 +390,9 @@ class DynamicLinearGaussianModel(object):
 
     def _prediction_error(self, key):
         """"""
+        if self.is_all_missing(self.y[key]):
+            return zeros((self.p[key], 1))
         return self.y[key] - dot(self.Z[key], self.a_prior[key]) - self.d[key]
-
-    def _initialise_parameters(self, key):
-        """"""
-        pass
 
     def _non_missing_F(self, key):
         """"""
@@ -506,6 +501,9 @@ class DynamicLinearGaussianModel(object):
             self.N2_final = self.N_final.copy()
 
         for index, key in reversed(list(enumerate(self.index))):
+            if index > self.d_diffuse:
+                self._smoother_recursion_step(key, index)
+                continue
             ZF_inv = dot(self.Z[key].T, self.F_inverse[key])
             self.K[key] = dot(dot(self.T[key], self.P_prior[key]), ZF_inv)
             self.L[key] = self.T[key] - dot(self.K[key], self.Z[key])
@@ -610,6 +608,39 @@ class DynamicLinearGaussianModel(object):
                 )
 
         self.smoother_run = True
+
+    def _smoother_recursion_step(self, key, index):
+        """"""
+        ZF_inv = dot(self.Z[key].T, self.F_inverse[key])
+        self.K[key] = dot(dot(self.T[key], self.P_prior[key]), ZF_inv)
+        self.L[key] = self.T[key] - dot(self.K[key], self.Z[key])
+
+        next_index = index + 1
+
+        try:
+            next_key = self.index[next_index]
+        except IndexError:
+            next_r = self.r_final
+            next_N = self.N_final
+        else:
+            next_r = self.r[next_key]
+            next_N = self.N[next_key]
+
+        self.r[key] = dot(ZF_inv, self.v[key]) + dot(self.L[key].T, next_r)
+        self.N[key] = dot(ZF_inv, self.Z[key]) + dot(
+            dot(self.L[key].T, next_N), self.L[key]
+        )
+        if index == self.d_diffuse + 1:
+            self.r0[key] = self.r[key]
+            self.r1[key] = zeros((self.m, 1))
+            self.N0[key] = self.N[key].copy()
+            self.N1[key] = zeros((self.m, self.m))
+            self.N2[key] = zeros((self.m, self.m))
+
+        self.a_hat[key] = self.a_prior[key] + dot(self.P_prior[key], self.r[key])
+        self.V[key] = self.P_prior[key] - dot(
+            dot(self.P_prior[key], self.N[key]), self.P_prior[key]
+        )
 
     def disturbance_smoother(self):
         """"""
