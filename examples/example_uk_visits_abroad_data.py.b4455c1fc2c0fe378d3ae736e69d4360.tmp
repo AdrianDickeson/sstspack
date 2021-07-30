@@ -182,7 +182,7 @@ if __name__ == "__main__":
     sigma_epsilon = 0.116
     sigma_zeta = 0.00090
     c_0 = -5.098
-    c_mu = -0.0984  # 0.0984
+    c_mu =  -0.0984  # 0.0984
     sigma_kappa = 0.00088
     rho = 0.921
     lambda_c = 2 * PI / 589

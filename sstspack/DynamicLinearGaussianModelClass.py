@@ -17,10 +17,11 @@ from numpy import (
 from numpy.linalg import inv, det, LinAlgError
 from numpy.random import multivariate_normal as mv_norm
 import pandas as pd
+from pandas import Series, DataFrame, NA
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
-EPSILON = 1e-14
+EPSILON = 1e-10
 
 
 class DynamicLinearGaussianModel(object):
@@ -141,10 +142,10 @@ class DynamicLinearGaussianModel(object):
                     self.model_data_df.loc[idx, col] = full(
                         (1, 1), self.model_data_df.loc[idx, col]
                     )
+
                 assert (
-                    self.model_data_df.loc[idx, col].shape == verification_columns[col],
-                    f"model_data_df.{col}[{idx}].shape has dimension {self.model_data_df.loc[idx, col].shape}, expected: {verification_columns[col]}",
-                )
+                    self.model_data_df.loc[idx, col].shape == verification_columns[col]
+                ), f"model_data_df.{col}[{idx}].shape has dimension {self.model_data_df.loc[idx, col].shape}, expected: {verification_columns[col]}"
 
         return y_series
 
@@ -360,31 +361,27 @@ class DynamicLinearGaussianModel(object):
 
             # TODO: Deal with multivariate data
             if index <= self.d_diffuse:
-                (
-                    a_prior_next,
-                    P_prior_next,
-                    P_infinity_prior,
-                    P_star_prior,
-                ) = self._diffuse_filter_recursion_step(key, index)
+                # (
+                #     a_prior_next,
+                #     P_prior_next,
+                #     P_infinity_prior,
+                #     P_star_prior,
+                # ) = self._diffuse_filter_recursion_step(key, index)
+                result = self._diffuse_filter_recursion_step(key, index)
             else:
-                a_prior_next, P_prior_next = self._filter_recursion_step(key)
+                # a_prior_next, P_prior_next = self._filter_recursion_step(key)
+                result = self._filter_recursion_step(key)
 
             nxt_idx = index + 1
             try:
                 nxt_key = self.index[nxt_idx]
             except IndexError:
-                self.a_prior_final = a_prior_next
-                self.P_prior_final = P_prior_next
-                if index < self.d_diffuse:
-                    self.P_infinity_prior_final = P_infinity_prior
-                    self.P_star_prior_final = P_star_prior
-                    # TODO: Warn user distribution is still diffuse
+                for field in result:
+                    setattr(self, f"{field}_final", result[field])
+                # TODO: Warn user distribution is still diffuse
             else:
-                self.a_prior[nxt_key] = a_prior_next
-                self.P_prior[nxt_key] = P_prior_next
-                if index < self.d_diffuse:
-                    self.P_infinity_prior[nxt_key] = P_infinity_prior
-                    self.P_star_prior[nxt_key] = P_star_prior
+                for field in result:
+                    self.model_data_df[field][nxt_key] = result[field]
 
         self.filter_run = True
 
@@ -451,15 +448,20 @@ class DynamicLinearGaussianModel(object):
         a_prior_next = dot(self.T[key], self.a_posterior[key]) + self.c[key]
         P_prior_next = dot(dot(self.T[key], self.P_posterior[key]), self.T[key].T) + RQR
 
-        P_infinity_prior = dot(
+        P_infinity_next = dot(
             dot(self.T[key], self.P_infinity_posterior[key]), self.T[key].T
         )
-        P_star_prior = (
+        P_star_next = (
             dot(dot(self.T[key], self.P_star_posterior[key]), self.T[key].T) + RQR
         )
-        P_prior_next = self.diffuse_P(P_star_prior, P_infinity_prior)
+        P_prior_next = self.diffuse_P(P_star_next, P_infinity_next)
 
-        return a_prior_next, P_prior_next, P_infinity_prior, P_star_prior
+        return {
+            "a_prior": a_prior_next,
+            "P_prior": P_prior_next,
+            "P_infinity_prior": P_infinity_next,
+            "P_star_prior": P_star_next,
+        }
 
     def _filter_recursion_step(self, key):
         """"""
@@ -479,7 +481,7 @@ class DynamicLinearGaussianModel(object):
         a_prior_next = dot(self.T[key], self.a_posterior[key]) + self.c[key]
         P_prior_next = dot(dot(self.T[key], self.P_posterior[key]), self.T[key].T) + RQR
 
-        return a_prior_next, P_prior_next
+        return {"a_prior": a_prior_next, "P_prior": P_prior_next}
 
     def smoother(self):
         """"""
@@ -503,111 +505,92 @@ class DynamicLinearGaussianModel(object):
         for index, key in reversed(list(enumerate(self.index))):
             if index > self.d_diffuse:
                 self._smoother_recursion_step(key, index)
-                continue
-            ZF_inv = dot(self.Z[key].T, self.F_inverse[key])
-            self.K[key] = dot(dot(self.T[key], self.P_prior[key]), ZF_inv)
-            self.L[key] = self.T[key] - dot(self.K[key], self.Z[key])
-
-            next_index = index + 1
-            try:
-                next_key = self.index[next_index]
-            except IndexError:
-                next_r = self.r_final
-                next_N = self.N_final
-                if index <= self.d_diffuse:
-                    next_r0 = self.r0_final
-                    next_r1 = self.r1_final
-                    next_N0 = self.N0_final
-                    next_N1 = self.N1_final
-                    next_N2 = self.N2_final
             else:
-                next_r = self.r[next_key]
-                next_N = self.N[next_key]
-                if index <= self.d_diffuse:
-                    next_r0 = self.r0[next_key]
-                    next_r1 = self.r1[next_key]
-                    next_N0 = self.N0[next_key]
-                    next_N1 = self.N1[next_key]
-                    next_N2 = self.N2[next_key]
+                self._diffuse_smoother_recursion_step(key, index)
 
-            if index <= self.d_diffuse:
-                if all(abs(ravel(self.F_infinity[key])) <= EPSILON):
-                    self.r0[key] = dot(
-                        dot(self.Z[key].T, self.F_inverse[key]), self.v[key]
-                    ) - dot(self.L0[key].T, next_r0)
-                    self.r1[key] = dot(self.T[key].T, next_r1)
-                    self.N0[key] = dot(
-                        dot(self.Z[key].T, self.F_inverse[key]), self.Z[key]
-                    ) + dot(dot(self.L0[key].T, next_N0), self.L0[key])
-                    self.N1[key] = dot(dot(self.T[key].T, next_N1), self.L0[key])
-                    self.N2[key] = dot(dot(self.T[key], next_N2), self.T[key])
-                else:
-                    self.r0[key] = dot(self.L0[key].T, next_r0)
-                    self.r1[key] = (
-                        dot(dot(self.Z[key].T, self.F1[key]), self.v[key])
-                        + dot(self.L0[key].T, next_r1)
-                        + dot(self.L1[key].T, next_r0)
-                    )
-                    self.N0[key] = dot(dot(self.L0[key].T, next_N0), self.L0[key])
-                    self.N1[key] = (
-                        dot(dot(self.Z[key].T, self.F1[key]), self.Z[key])
-                        + dot(dot(self.L0[key].T, next_N1), self.L0[key])
-                        + dot(dot(self.L1[key].T, next_N0), self.L0[key])
-                    )
-                    self.N2[key] = (
-                        dot(dot(self.Z[key].T, self.F2[key]), self.Z[key])
-                        + dot(dot(self.L0[key].T, next_N2), self.L0[key])
-                        + dot(dot(self.L0[key].T, next_N1), self.L1[key])
-                        + dot(dot(self.L1[key].T, next_N1), self.L0[key])
-                        + dot(dot(self.L1[key].T, next_N0), self.L1[key])
-                    )
-
-                self.a_hat[key] = (
-                    self.a_prior[key]
-                    + dot(self.P_star_prior[key], self.r0[key])
-                    + dot(self.P_infinity_prior[key], self.r1[key])
-                )
-                self.V[key] = (
-                    self.P_star_prior[key]
-                    - dot(
-                        dot(self.P_star_prior[key], self.N0[key]),
-                        self.P_star_prior[key],
-                    )
-                    - (
-                        dot(
-                            dot(self.P_infinity_prior[key], self.N1[key]),
-                            self.P_star_prior[key],
-                        )
-                    ).T
-                    - dot(
-                        dot(self.P_infinity_prior[key], self.N1[key]),
-                        self.P_star_prior[key],
-                    )
-                    - dot(
-                        dot(self.P_infinity_prior[key], self.N2[key]),
-                        self.P_infinity_prior[key],
-                    )
-                )
-            else:
-                self.r[key] = dot(ZF_inv, self.v[key]) + dot(self.L[key].T, next_r)
-                self.N[key] = dot(ZF_inv, self.Z[key]) + dot(
-                    dot(self.L[key].T, next_N), self.L[key]
-                )
-                if index == self.d_diffuse + 1:
-                    self.r0[key] = self.r[key]
-                    self.r1[key] = zeros((self.m, 1))
-                    self.N0[key] = self.N[key].copy()
-                    self.N1[key] = zeros((self.m, self.m))
-                    self.N2[key] = zeros((self.m, self.m))
-
-                self.a_hat[key] = self.a_prior[key] + dot(
-                    self.P_prior[key], self.r[key]
-                )
-                self.V[key] = self.P_prior[key] - dot(
-                    dot(self.P_prior[key], self.N[key]), self.P_prior[key]
-                )
+        self._finish_smoother()
 
         self.smoother_run = True
+
+    def _finish_smoother(self):
+        """"""
+        pass
+
+    def _diffuse_smoother_recursion_step(self, key, index):
+        """"""
+        next_index = index + 1
+        try:
+            next_key = self.index[next_index]
+        except IndexError:
+            next_r0 = self.r0_final
+            next_r1 = self.r1_final
+            next_N0 = self.N0_final
+            next_N1 = self.N1_final
+            next_N2 = self.N2_final
+        else:
+            next_r0 = self.r0[next_key]
+            next_r1 = self.r1[next_key]
+            next_N0 = self.N0[next_key]
+            next_N1 = self.N1[next_key]
+            next_N2 = self.N2[next_key]
+
+        if all(abs(ravel(self.F_infinity[key])) <= EPSILON):
+            self.r0[key] = dot(
+                dot(self.Z[key].T, self.F_inverse[key]), self.v[key]
+            ) - dot(self.L0[key].T, next_r0)
+            self.r1[key] = dot(self.T[key].T, next_r1)
+            self.N0[key] = dot(
+                dot(self.Z[key].T, self.F_inverse[key]), self.Z[key]
+            ) + dot(dot(self.L0[key].T, next_N0), self.L0[key])
+            self.N1[key] = dot(dot(self.T[key].T, next_N1), self.L0[key])
+            self.N2[key] = dot(dot(self.T[key], next_N2), self.T[key])
+        else:
+            self.r0[key] = dot(self.L0[key].T, next_r0)
+            self.r1[key] = (
+                dot(dot(self.Z[key].T, self.F1[key]), self.v[key])
+                + dot(self.L0[key].T, next_r1)
+                + dot(self.L1[key].T, next_r0)
+            )
+            self.N0[key] = dot(dot(self.L0[key].T, next_N0), self.L0[key])
+            self.N1[key] = (
+                dot(dot(self.Z[key].T, self.F1[key]), self.Z[key])
+                + dot(dot(self.L0[key].T, next_N1), self.L0[key])
+                + dot(dot(self.L1[key].T, next_N0), self.L0[key])
+            )
+            self.N2[key] = (
+                dot(dot(self.Z[key].T, self.F2[key]), self.Z[key])
+                + dot(dot(self.L0[key].T, next_N2), self.L0[key])
+                + dot(dot(self.L0[key].T, next_N1), self.L1[key])
+                + dot(dot(self.L1[key].T, next_N1), self.L0[key])
+                + dot(dot(self.L1[key].T, next_N0), self.L1[key])
+            )
+
+        self.a_hat[key] = (
+            self.a_prior[key]
+            + dot(self.P_star_prior[key], self.r0[key])
+            + dot(self.P_infinity_prior[key], self.r1[key])
+        )
+        self.V[key] = (
+            self.P_star_prior[key]
+            - dot(
+                dot(self.P_star_prior[key], self.N0[key]),
+                self.P_star_prior[key],
+            )
+            - (
+                dot(
+                    dot(self.P_infinity_prior[key], self.N1[key]),
+                    self.P_star_prior[key],
+                )
+            ).T
+            - dot(
+                dot(self.P_infinity_prior[key], self.N1[key]),
+                self.P_star_prior[key],
+            )
+            - dot(
+                dot(self.P_infinity_prior[key], self.N2[key]),
+                self.P_infinity_prior[key],
+            )
+        )
 
     def _smoother_recursion_step(self, key, index):
         """"""

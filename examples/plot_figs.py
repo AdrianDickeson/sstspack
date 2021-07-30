@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from numpy import sqrt, linspace, array, hstack, dot, ravel
 from scipy.stats import norm, gaussian_kde
 from numpy.random import normal
+import matplotlib.ticker as mticker
 
 from sstspack import DynamicLinearGaussianModel as DLGM
 
@@ -973,3 +974,28 @@ def plot_fig145(y_series, transformed_series, model):
     ax = axs[1]
     ax.scatter(x=transformed_series.index, y=transformed_series, s=1)
     ax.set_ylim((-30, 0))
+
+    fig.tight_layout(rect=FIG_LAYOUT)
+    fig.savefig("figures/fig14.5.pdf")
+
+
+def plot_fig142(extended_model):
+    """"""
+    a_hat = hstack([extended_model.a_hat[idx] for idx in extended_model.index])
+
+    fig, axs = plt.subplots(2, 1)
+
+    ax = axs[0]
+    ax.plot(extended_model.index, a_hat[2, :])
+    ax.xaxis.set_major_locator(mticker.MaxNLocator(5))
+    ticks_loc = ax.get_xticks()
+    ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
+
+    ax = axs[1]
+    ax.plot(extended_model.index, a_hat[0, :])
+    ax.xaxis.set_major_locator(mticker.MaxNLocator(5))
+    ticks_loc = ax.get_xticks()
+    ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
+
+    fig.tight_layout(rect=FIG_LAYOUT)
+    fig.savefig("figures/fig14.2.pdf")
