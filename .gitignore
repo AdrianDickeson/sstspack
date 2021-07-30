@@ -7,3 +7,4 @@ example_pkg_YOUR_USERNAME_HERE.egg-info/
 *.pyc
 *.log
 *.aux
+*_old.py
