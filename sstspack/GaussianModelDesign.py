@@ -1,15 +1,29 @@
 from math import cos, sin
 from copy import copy
+from typing import List, Union
 
-from numpy import full, ones, zeros, identity, hstack, vstack, pi as PI, diag, block
-import pandas as pd
+from numpy import (
+    full,
+    ones,
+    zeros,
+    identity,
+    hstack,
+    vstack,
+    pi as PI,
+    diag,
+    block,
+    array,
+)
+from pandas import Series, DataFrame, concat
 
 # from scipy.linalg.special_matrices import block_diag
 from sstspack.Utilities import block_diag
 
 
 # TODO: enable input of parameters as arrays
-def get_local_level_model_design(length_index, Q, H, dt=None):
+def get_local_level_model_design(
+    length_index: Union[int, List, Series], Q: array, H: array, dt: List[float] = None
+) -> DataFrame:
     """"""
     Z = ones((1, 1))
     d = zeros((1, 1))
@@ -262,7 +276,7 @@ def get_intervention_model_design(length_index, intervention_point, Q=0, H=0):
 
     result_post = get_static_model_df(post_index, Z=Z, d=d, H=H, T=T, c=c, R=R, Q=Q)
 
-    return pd.concat([result_prior, result_post])
+    return concat([result_prior, result_post])
 
 
 def get_time_varying_regression_model_design(length_index, regressors_df, Q, H):
@@ -290,7 +304,7 @@ def get_time_varying_regression_model_design(length_index, regressors_df, Q, H):
         )
         submodels.append(get_static_model_df([idx], Z=Z, d=d, H=H, T=T, c=c, R=R, Q=Q))
 
-    return pd.concat(submodels)
+    return concat(submodels)
 
 
 def get_static_model_df(length_index, **kwargs):
@@ -312,7 +326,7 @@ def get_static_model_df(length_index, **kwargs):
         index = length_index
         length = len(length_index)
 
-    result = pd.DataFrame(index=index)
+    result = DataFrame(index=index)
     for key in kwargs:
         result[key] = [kwargs[key]] * length
 

@@ -189,15 +189,14 @@ class DynamicLinearGaussianModel(object):
 
         for idx in self.index:
             Z = mask
-            if mask is None:
+            if Z is None:
                 Z = self.Z[idx]
             value = dot(Z, self.model_data_df.loc[idx, field])
             if value.shape == (1, 1):
                 value = value[0, 0]
             data.append(value)
 
-        result = pd.Series(data, index=self.index)
-        return result
+        return pd.Series(data, index=self.index)
 
     def quadratic_aggregate_field(self, field, mask=None):
         """"""
@@ -205,15 +204,14 @@ class DynamicLinearGaussianModel(object):
 
         for idx in self.index:
             Z = mask
-            if mask is None:
+            if Z is None:
                 Z = self.Z[idx]
             value = dot(dot(Z, self.model_data_df.loc[idx, field]), Z.T)
             if value.shape == (1, 1):
                 value = value[0, 0]
             data.append(value)
 
-        result = pd.Series(data, index=self.index)
-        return result
+        return pd.Series(data, index=self.index)
 
     @property
     def a_prior_aggregate(self):
@@ -631,8 +629,8 @@ class DynamicLinearGaussianModel(object):
             self.smoother()
 
         for index, key in reversed(list(enumerate(self.index))):
+            next_index = index + 1
             if index <= self.d_diffuse:
-                next_index = index + 1
                 try:
                     next_key = self.index[next_index]
                 except IndexError:
@@ -678,7 +676,6 @@ class DynamicLinearGaussianModel(object):
                 self.eta_hat_sigma2[key] = self.Q[key].copy()
                 QR = dot(self.Q[key], self.R[key].T)
 
-                next_index = index + 1
                 try:
                     next_key = self.index[next_index]
                 except IndexError:
@@ -787,7 +784,7 @@ class DynamicLinearGaussianModel(object):
             pass
 
         try:
-            if all([DynamicLinearGaussianModel.is_all_missing(val) for val in value]):
+            if all(DynamicLinearGaussianModel.is_all_missing(val) for val in value):
                 return True
         except TypeError:
             pass
@@ -798,7 +795,7 @@ class DynamicLinearGaussianModel(object):
     def is_partial_missing(value):
         """"""
         try:
-            if any([DynamicLinearGaussianModel.is_all_missing(val) for val in value]):
+            if any(DynamicLinearGaussianModel.is_all_missing(val) for val in value):
                 return True
         except TypeError:
             pass
