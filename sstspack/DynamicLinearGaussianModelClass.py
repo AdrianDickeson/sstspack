@@ -84,8 +84,8 @@ class DynamicLinearGaussianModel(object):
         self,
         y_series,
         model_design_df,
-        a_prior_initial,
-        P_prior_initial,
+        a_prior_initial=None,
+        P_prior_initial=None,
         diffuse_states=None,
         validate_input=True,
     ):
@@ -303,6 +303,12 @@ class DynamicLinearGaussianModel(object):
         assert (a_prior_initial is not None and P_prior_initial is not None) or (
             diffuse_states is not None and all(diffuse_states)
         )
+
+        if a_prior_initial is None:
+            a_prior_initial = zeros((self.m, 1))
+
+        if P_prior_initial is None:
+            P_prior_initial = identity(self.m)
 
         if diffuse_states is None or not any(diffuse_states):
             self.d_diffuse = -1

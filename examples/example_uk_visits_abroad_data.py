@@ -196,5 +196,6 @@ if __name__ == "__main__":
     # plot_figs.plot_fig141(y_series, ylog_series)
     plot_figs.plot_fig142(extended_model)
 
-    plt.show()
+    # plt.show()
+    print(extended_model.log_likelihood())
     print("Finished")
