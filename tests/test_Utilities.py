@@ -1,4 +1,4 @@
-from numpy import array, ones, identity, zeros, full
+from numpy import array, ones, identity, zeros, full, exp
 from numpy.random import normal
 from numpy.ma.testutils import assert_array_equal, assert_array_almost_equal
 
@@ -24,6 +24,17 @@ def test_jacobian():
 
     assert_array_almost_equal(
         jacobian(test_func, 3 * ones(2), relative=False), expected
+    )
+
+    def test_func(x):
+        return full((1, 1), x[0] + exp(-1 - 1 * x[0]) * x[1])
+
+    expected = zeros((1, 2))
+    expected[0, 0] = 1 - exp(-4) * 2
+    expected[0, 1] = exp(-4)
+
+    assert_array_almost_equal(
+        jacobian(test_func, array([3, 2]), relative=False), expected
     )
 
 

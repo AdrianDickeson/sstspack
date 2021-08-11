@@ -94,6 +94,28 @@ def test___init___diffuse():
     assert_array_equal(model.index, index_standard)
 
 
+def test___init___missing():
+    """"""
+    y_missing = y_standard.copy()
+    y_missing[1] = NA
+    model_design, a_initial, P_initial = get_standard_local_model_parameters()
+
+    model = DLGM(y_missing, model_design, a_initial, P_initial)
+
+    assert model.is_all_missing(model.y[1])
+    assert model.y[2] == y_missing[2]
+    assert model.y[3] == y_missing[3]
+
+    # Test with incomplete y Series
+    y_missing = Series([2, 1], index=[2, 3])
+
+    model = DLGM(y_missing, model_design, a_initial, P_initial)
+
+    assert model.is_all_missing(model.y[1])
+    assert model.y[2] == y_missing[2]
+    assert model.y[3] == y_missing[3]
+
+
 def test_filter():
     """"""
     expected_a_prior = Series(

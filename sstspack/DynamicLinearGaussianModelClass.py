@@ -101,7 +101,8 @@ class DynamicLinearGaussianModel(object):
         if validate_input:
             y_series = self._validate_input_variables(y_series)
 
-        self.model_data_df.insert(0, "y", y_series)
+        self.model_data_df.insert(0, "y", NA)
+        self.model_data_df.y[y_series.index] = y_series
 
         self._set_up_initial_terms(a_prior_initial, P_prior_initial, diffuse_states)
 
@@ -115,11 +116,13 @@ class DynamicLinearGaussianModel(object):
 
     def _validate_input_variables(self, y_series):
         """"""
-        y_series = y_series.astype(object)
+        assert len(self.index) == len(
+            set(self.index)
+        ), "There are duplicate elements in model_design_df.index"
         # Verify y_series.index is a subset of self.index
         assert all(
             idx in self.index for idx in y_series.index
-        ), f"Elements of y_series.index are not in model_design.index, elements missing: (y_series.index[y_series.index not in self.index])"
+        ), f"Elements of y_series.index are not in model_design.index, elements missing: {y_series.index[[idx not in self.index for idx in y_series.index]]}"
 
         self._check_model_data_columns()
 
@@ -365,15 +368,8 @@ class DynamicLinearGaussianModel(object):
 
             # TODO: Deal with multivariate data
             if index <= self.d_diffuse:
-                # (
-                #     a_prior_next,
-                #     P_prior_next,
-                #     P_infinity_prior,
-                #     P_star_prior,
-                # ) = self._diffuse_filter_recursion_step(key, index)
                 result = self._diffuse_filter_recursion_step(key, index)
             else:
-                # a_prior_next, P_prior_next = self._filter_recursion_step(key)
                 result = self._filter_recursion_step(key)
 
             nxt_idx = index + 1

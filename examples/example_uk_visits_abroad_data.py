@@ -125,10 +125,10 @@ def get_extended_model_design(parameters, model_template=None, y_series=None, dt
     Q_full[0, 0] = 0
     Q_full[1, 1] = parameters[1]
     Q_full[2, 2] = 1
-    Q_full[1, 2] = Q_full[2, 1] = parameters[3] * sqrt(parameters[1] * parameters[2])
+    # Q_full[1, 2] = Q_full[2, 1] = parameters[3] * sqrt(parameters[1] * parameters[2])
     Q_fn = get_Q_fn(Q_full)
 
-    Z_fn = get_Z_fn(parameters[-2:])
+    Z_fn = get_Z_fn(parameters[2:])
     T_fn = get_T_fn(T)
     R_fn = get_R_fn(R)
 
@@ -138,64 +138,63 @@ def get_extended_model_design(parameters, model_template=None, y_series=None, dt
 
 
 if __name__ == "__main__":
+    sigma_epsilon = 0.116
+    sigma_zeta = 0.00090
+    c_0 = -5.098
+    c_mu = 0  # 0.0984
+    sigma_kappa = 0.00088
+    rho = 0.921
+    lambda_c = 2 * PI / 589
+
     set_printoptions(precision=2)
     y_series = read_uk_visits_abroad_data()
     ylog_series = log_pandas_series(y_series)
 
-    # extended_model_function = get_extended_model_design
-    # extended_model_design_template = get_extended_model_design(
-    #     array([0, 0, 1]), y_series=y_series
-    # )
+    extended_model_function = get_extended_model_design
+    extended_model_design_template = get_extended_model_design(
+        array([0, 0, 1]), y_series=y_series
+    )
 
-    initial_parameter_values = array([0.25] * 5)
-    parameter_bounds = array([(0, inf), (0, inf), (0, inf), (-inf, inf), (-inf, inf)])
-    parameter_names = array(["H", "Q_trend", "Q_seasonal" "c_0", "c_mu"])
+    initial_parameter_values = array([sigma_epsilon, sigma_kappa, c_0, c_mu])
+    parameter_bounds = array([(0, inf), (0, inf), (-0.5, 0.5), (-0.5, 0.5)])
+    parameter_names = array(["H", "Q_trend", "c_0", "c_mu"])
 
     # Diffuse initialisation used - a0, P0 are ignored
     a0 = zeros((14, 1))
     P0 = 1e6 * identity(14)
     diffuse_states = [False] * 14
 
-    # start_time = time.time()
-    # res = fit.fit_model_max_likelihood(
-    #     initial_parameter_values,
-    #     parameter_bounds,
-    #     extended_model_function,
-    #     y_series,
-    #     a0,
-    #     P0,
-    #     diffuse_states,
-    #     extended_model_design_template,
-    #     parameter_names,
-    #     model_class=EKF,
-    # )
-    # end_time = time.time()
+    start_time = time.time()
+    res = fit.fit_model_max_likelihood(
+        initial_parameter_values,
+        parameter_bounds,
+        extended_model_function,
+        y_series,
+        a0,
+        P0,
+        diffuse_states,
+        extended_model_design_template,
+        parameter_names,
+        model_class=EKF,
+    )
+    end_time = time.time()
 
-    # model = res.model
-    # model.smoother()
-
-    # print("Extended River Data")
-    # print("-------------------")
-    # print(res)
-    # print("Time taken: {:.2f} seconds\n".format(end_time - start_time))
-
-    sigma_epsilon = 0.116
-    sigma_zeta = 0.00090
-    c_0 = -5.098
-    c_mu = -0.0984  # 0.0984
-    sigma_kappa = 0.00088
-    rho = 0.921
-    lambda_c = 2 * PI / 589
-
-    parameters = array([sigma_epsilon, sigma_zeta, sigma_kappa, rho, c_0, c_mu])
-    extended_model_design = get_extended_model_design(parameters, None, y_series, None)
-
-    extended_model = EKF(y_series, extended_model_design, a0, P0, diffuse_states)
+    extended_model = res.model
     extended_model.smoother()
+
+    print("Extended KF: UK Visitors Abroad Data")
+    print("------------------------------------")
+    print(res)
+    print(f"Time taken: {end_time - start_time:.2f} seconds\n")
+
+    # parameters = array([sigma_epsilon, sigma_zeta, c_0, c_mu])
+    # extended_model_design = get_extended_model_design(parameters, None, y_series, None)
+
+    # extended_model = EKF(y_series, extended_model_design, a0, P0, diffuse_states)
+    # extended_model.smoother()
 
     # plot_figs.plot_fig141(y_series, ylog_series)
     plot_figs.plot_fig142(extended_model)
 
-    # plt.show()
-    print(extended_model.log_likelihood())
+    plt.show()
     print("Finished")

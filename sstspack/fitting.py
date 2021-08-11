@@ -201,7 +201,7 @@ def fit_model_max_likelihood(
     model_data = model_func(result.parameters, model_template, y_series, dt)
     result.model_data = model_data
 
-    model = DLGM(y_series, model_data, a0, P0, diffuse_state)
+    model = model_class(y_series, model_data, a0, P0, diffuse_state)
     result.model = model
 
     return result

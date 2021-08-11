@@ -89,6 +89,8 @@ class ExtendedDynamicModel(DynamicLinearGaussianModel):
 
     def _prediction_error(self, key):
         """"""
+        if self.initial_smoother_run:
+            return self.y[key] - self.Z_hat[key]
         return self.y[key] - self.Z[key]
 
     def _non_missing_F(self, key):
@@ -238,6 +240,7 @@ class ExtendedDynamicModel(DynamicLinearGaussianModel):
             )
             self.H[key] = self.H_fn[key](self.a_prior[key])
         else:
+            self.Z_hat[key] = self.Z_fn[key](self.a_hat_prior[key])
             self.Z_hat_prime[key] = reshape(
                 jacobian(self.Z_fn[key], self.a_hat_initial[key], relative=False),
                 (self.p[key], self.m),
@@ -385,7 +388,9 @@ class ExtendedDynamicModel(DynamicLinearGaussianModel):
             L = self.L
 
             r = self.r
+            r_final = self.r_final
             N = self.N
+            N_final = self.N_final
             r0 = self.r0
             r1 = self.r1
             N0 = self.N0
@@ -405,7 +410,9 @@ class ExtendedDynamicModel(DynamicLinearGaussianModel):
             L = self.L_hat
 
             r = self.r_hat
+            r_final = self.r_hat_final
             N = self.N_hat
+            N_final = self.N_hat_final
             r0 = self.r0_hat
             r1 = self.r1_hat
             N0 = self.N0_hat
@@ -421,8 +428,8 @@ class ExtendedDynamicModel(DynamicLinearGaussianModel):
         try:
             next_key = self.index[next_index]
         except IndexError:
-            next_r = self.r_final
-            next_N = self.N_final
+            next_r = r_final
+            next_N = N_final
         else:
             next_r = r[next_key]
             next_N = N[next_key]
@@ -452,3 +459,10 @@ class ExtendedDynamicModel(DynamicLinearGaussianModel):
 
             self.filter()
             self.smoother()
+
+    def smoother(self):
+        """"""
+        self.r_hat_final = zeros((self.m, 1))
+        self.N_hat_final = zeros((self.m, self.m))
+
+        DynamicLinearGaussianModel.smoother(self)
