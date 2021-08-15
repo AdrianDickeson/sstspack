@@ -127,6 +127,7 @@ class DynamicLinearGaussianModel(object):
         self._check_model_data_columns()
 
         # Verify all data in matrix form
+        y_series = y_series.astype(object)
         p = self.p
         for idx in y_series.index:
             try:

@@ -41,10 +41,9 @@ def read_motorcycle_data():
 
 
 def motorcycle_spline_model(parameters, model_template, y_timeseries, dt):
-    result = md.get_spline_smoothing_model_design(
+    return md.get_spline_smoothing_model_design(
         y_timeseries, parameters[0], parameters[1], dt
     )
-    return result
 
 
 if __name__ == "__main__":
