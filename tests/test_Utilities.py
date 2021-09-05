@@ -37,6 +37,20 @@ def test_jacobian():
         jacobian(test_func, array([3, 2]), relative=False), expected
     )
 
+    c_0 = 0.01
+    c_mu = 0.1
+
+    def test_exp_func(x):
+        return full((1, 1), x[0] + exp(c_0 + c_mu * x[0]) * x[2])
+
+    x_values = 3
+    exp_term = exp(c_0 + c_mu * x_values)
+    expected = zeros((1, 4))
+    expected[0, 0] = 1 + c_mu * exp_term * x_values
+    expected[0, 2] = exp_term
+
+    assert_array_almost_equal(jacobian(test_exp_func, full(4, 3), h=1e-6), expected)
+
 
 def test_hessian():
     """"""

@@ -19,7 +19,7 @@ def block_diag(matrix_list):
     return result
 
 
-def jacobian(func, x, h=0.01, relative=True, *args):
+def jacobian(func, x, h=1e-6, relative=False, *args):
     """"""
     y = func(x)
     result = zeros((len(y), len(x)))

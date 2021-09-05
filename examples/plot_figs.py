@@ -756,19 +756,46 @@ def plot_fig141(y_series, ylog_series):
     ax = axs[0]
     ax.plot(y_series.index, y_series)
     ax.set_ylabel("Visitors (thousands)")
-    ax.set_xticklabels(
-        [val if idx % 60 == 0 else "" for idx, val in enumerate(y_series.index)]
-    )
+    ax.xaxis.set_major_locator(mticker.MaxNLocator(5))
+    ticks_loc = ax.get_xticks()
+    ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
 
     ax = axs[1]
     ax.plot(ylog_series.index, ylog_series)
     ax.set_ylabel("Log Visitors (thousands)")
-    ax.set_xticklabels(
-        [val if idx % 60 == 0 else "" for idx, val in enumerate(y_series.index)]
-    )
+    ax.xaxis.set_major_locator(mticker.MaxNLocator(5))
+    ticks_loc = ax.get_xticks()
+    ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
 
     fig.tight_layout(rect=FIG_LAYOUT)
     fig.savefig("figures/fig14.4.pdf")
+
+
+def plot_fig142(extended_model):
+    """"""
+    a_hat = hstack([extended_model.a_hat[idx] for idx in extended_model.index])
+    a_hat_initial = hstack(
+        [extended_model.a_hat_initial[idx] for idx in extended_model.index]
+    )
+
+    fig, axs = plt.subplots(2, 1)
+    fig.suptitle("{} - Fig. 14.2".format(UK_VISITORS_DATA_TITLE), fontsize=14)
+
+    ax = axs[0]
+    ax.plot(extended_model.index, a_hat[2, :])
+    ax.xaxis.set_major_locator(mticker.MaxNLocator(5))
+    ticks_loc = ax.get_xticks()
+    ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
+
+    ax = axs[1]
+    # ax.plot(extended_model.index, a_hat[0, :])
+    ax.plot(extended_model.index, a_hat_initial[0, :])
+    ax.xaxis.set_major_locator(mticker.MaxNLocator(5))
+    ticks_loc = ax.get_xticks()
+    ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
+
+    fig.tight_layout(rect=FIG_LAYOUT)
+    fig.savefig("figures/fig14.2.pdf")
 
 
 def plot_fig143(y_series, model):
@@ -815,26 +842,3 @@ def plot_fig145(y_series, transformed_series, model):
 
     fig.tight_layout(rect=FIG_LAYOUT)
     fig.savefig("figures/fig14.5.pdf")
-
-
-def plot_fig142(extended_model):
-    """"""
-    a_hat = hstack([extended_model.a_hat[idx] for idx in extended_model.index])
-
-    fig, axs = plt.subplots(2, 1)
-    fig.suptitle("{} - Fig. 14.2".format(UK_VISITORS_DATA_TITLE), fontsize=14)
-
-    ax = axs[0]
-    ax.plot(extended_model.index, a_hat[2, :])
-    ax.xaxis.set_major_locator(mticker.MaxNLocator(5))
-    ticks_loc = ax.get_xticks()
-    ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
-
-    ax = axs[1]
-    ax.plot(extended_model.index, a_hat[0, :])
-    ax.xaxis.set_major_locator(mticker.MaxNLocator(5))
-    ticks_loc = ax.get_xticks()
-    ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
-
-    fig.tight_layout(rect=FIG_LAYOUT)
-    fig.savefig("figures/fig14.2.pdf")
