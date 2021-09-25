@@ -58,6 +58,9 @@ class DynamicLinearGaussianModel(object):
         "eta_hat_sigma2",
         "u",
         "D",
+        "p",
+    ]
+    diffuse_estimation_columns = [
         "P_star_prior",
         "P_infinity_prior",
         "M_star",
@@ -77,7 +80,6 @@ class DynamicLinearGaussianModel(object):
         "N0",
         "N1",
         "N2",
-        "p",
     ]
 
     def __init__(
@@ -95,14 +97,15 @@ class DynamicLinearGaussianModel(object):
         self._m = None
         self.model_data_df = model_design_df.copy()
 
-        self._add_estimation_columns()
+        if validate_input:
+            y_series = self._validate_y_series(y_series)
+        self._insert_column(y_series, "y", 0)
+
+        self._add_columns_to_data_df(self.estimation_columns)
         self._initialise_model_data(a_prior_initial)
 
         if validate_input:
-            y_series = self._validate_input_variables(y_series)
-
-        self.model_data_df.insert(0, "y", NA)
-        self.model_data_df.y[y_series.index] = y_series
+            self._validate_model_data_df()
 
         self._set_up_initial_terms(a_prior_initial, P_prior_initial, diffuse_states)
 
@@ -110,32 +113,45 @@ class DynamicLinearGaussianModel(object):
         self.smoother_run = False
         self.disturbance_smoother_run = False
 
-    def _initialise_model_data(self, a_prior_initial):
+    def _validate_y_series(self, y_series):
         """"""
-        pass
-
-    def _validate_input_variables(self, y_series):
-        """"""
-        assert len(self.index) == len(
-            set(self.index)
-        ), "There are duplicate elements in model_design_df.index"
         # Verify y_series.index is a subset of self.index
-        assert all(
-            idx in self.index for idx in y_series.index
-        ), f"Elements of y_series.index are not in model_design.index, elements missing: {y_series.index[[idx not in self.index for idx in y_series.index]]}"
-
-        self._check_model_data_columns()
+        assert all(idx in self.index for idx in y_series.index), (
+            f"Elements of y_series.index are not in "
+            + f"model_design.index, elements missing: "
+            + f"{y_series.index[[idx not in self.index for idx in y_series.index]]}"
+        )
 
         # Verify all data in matrix form
         y_series = y_series.astype(object)
-        p = self.p
         for idx in y_series.index:
             try:
                 y_series[idx] = full((1, 1), y_series[idx])
             except ValueError:
                 pass
 
-            assert y_series[idx].shape == (p[idx], 1)
+        return y_series
+
+    def _insert_column(self, series, column_name, idx):
+        """"""
+        self.model_data_df.insert(idx, column_name, NA)
+        self.model_data_df.loc[series.index, column_name] = series
+
+    def _initialise_model_data(self, a_prior_initial):
+        """"""
+        pass
+
+    def _validate_model_data_df(self):
+        """"""
+        assert len(self.index) == len(
+            set(self.index)
+        ), "There are duplicate elements in model_design_df.index"
+
+        self._check_model_data_columns()
+
+        p = self.p
+        for idx in self.index:
+            assert self.y[idx].shape == (p[idx], 1)
 
         for idx in self.index:
             verification_columns = self._verification_columns(p, idx)
@@ -144,25 +160,23 @@ class DynamicLinearGaussianModel(object):
                     _ = self.model_data_df.loc[idx, col].shape
                 except AttributeError:
                     self.model_data_df.loc[idx, col] = full(
-                        (1, 1), self.model_data_df.loc[idx, col]
+                        (1, 1), self.model_data_df.loc[col][idx]
                     )
 
                 assert (
                     self.model_data_df.loc[idx, col].shape == verification_columns[col]
                 ), f"model_data_df.{col}[{idx}].shape has dimension {self.model_data_df.loc[idx, col].shape}, expected: {verification_columns[col]}"
 
-        return y_series
-
     def _check_model_data_columns(self):
         """"""
         assert all(col in self.model_data_df.columns for col in self.expected_columns)
 
-    def _add_estimation_columns(self):
+    def _add_columns_to_data_df(self, columns):
         """"""
         self.model_data_df = self.model_data_df.reindex(
-            columns=self.model_data_df.columns.tolist() + self.estimation_columns
+            columns=self.model_data_df.columns.tolist() + columns
         )
-        self.model_data_df[self.estimation_columns] = pd.NA
+        self.model_data_df[columns] = pd.NA
 
     def _verification_columns(self, p, idx):
         """"""
@@ -291,10 +305,10 @@ class DynamicLinearGaussianModel(object):
 
     @property
     def p(self):
-        """ """
+        """"""
         return pd.Series(
-            data=[self.Z[key].shape[0] for key in self.index],
-            index=self.model_data_df.index,
+            data=[self.y[key].shape[0] for key in self.index],
+            index=self.index,
         )
 
     @property
@@ -306,6 +320,9 @@ class DynamicLinearGaussianModel(object):
         """"""
         assert (a_prior_initial is not None and P_prior_initial is not None) or (
             diffuse_states is not None and all(diffuse_states)
+        ), (
+            "Neither a complete diffuse initial condition has been specified nor "
+            + "a starting condition has been provided"
         )
 
         if a_prior_initial is None:
@@ -315,11 +332,14 @@ class DynamicLinearGaussianModel(object):
             P_prior_initial = identity(self.m)
 
         if diffuse_states is None or not any(diffuse_states):
+            self.diffuse_model = False
             self.d_diffuse = -1
 
             self.a_prior[self.initial_index] = a_prior_initial
             self.P_prior[self.initial_index] = P_prior_initial
         else:
+            self.diffuse_model = True
+            self._add_columns_to_data_df(self.diffuse_estimation_columns)
             self.d_diffuse = self.n
 
             a_prior_initial[diffuse_states, 0] = 0
@@ -335,12 +355,12 @@ class DynamicLinearGaussianModel(object):
             Q0 = Q0[:, proper_states]
             self.P_star_prior[self.initial_index] = dot(dot(R0, Q0), R0.T)
 
-            self.P_prior[self.initial_index] = self.diffuse_P(
+            self.P_prior[self.initial_index] = self._diffuse_P(
                 self.P_star_prior[self.initial_index],
                 self.P_infinity_prior[self.initial_index],
             )
 
-    def adapt_row_to_any_missing_data(self, row):
+    def _adapt_row_to_any_missing_data(self, row):
         """"""
         v_shape = (self.p[row], 1)
         if self.is_partial_missing(self.y[row]):
@@ -365,13 +385,15 @@ class DynamicLinearGaussianModel(object):
         """
         for index, key in enumerate(self.index):
             self._non_missing_F(key)
-            self.adapt_row_to_any_missing_data(key)
+            self._adapt_row_to_any_missing_data(key)
 
-            # TODO: Deal with multivariate data
+            # TODO: Deal with multivariate data as univariate data
             if index <= self.d_diffuse:
-                result = self._diffuse_filter_recursion_step(key, index)
+                self._diffuse_filter_prediction_recursion_step(key, index)
+                result = self._diffuse_filter_posterior_recursion_step(key)
             else:
-                result = self._filter_recursion_step(key)
+                self._filter_prediction_recursion_step(key)
+                result = self._filter_posterior_recursion_step(key)
 
             nxt_idx = index + 1
             try:
@@ -382,7 +404,7 @@ class DynamicLinearGaussianModel(object):
                 # TODO: Warn user distribution is still diffuse
             else:
                 for field in result:
-                    self.model_data_df[field][nxt_key] = result[field]
+                    self.__getattr__(field)[nxt_key] = result[field]
 
         self.filter_run = True
 
@@ -397,7 +419,7 @@ class DynamicLinearGaussianModel(object):
         PZ = dot(self.P_prior[key], self.Z[key].T)
         self.F[key] = dot(self.Z[key], PZ) + self.H[key]
 
-    def _diffuse_filter_recursion_step(self, key, index):
+    def _diffuse_filter_prediction_recursion_step(self, key, index):
         """"""
         self.v[key] = self._prediction_error(key)
         self.F_infinity[key] = dot(
@@ -425,25 +447,33 @@ class DynamicLinearGaussianModel(object):
             K1_hat = dot(self.M_star[key], self.F1[key]) + dot(
                 self.M_infinity[key], self.F2[key]
             )
-        self.K0[key] = dot(self.T[key], K0_hat)
-        self.K1[key] = dot(self.T[key], K1_hat)
 
         L0_hat = identity(self.m) - dot(K0_hat, self.Z[key])
         L1_hat = -1 * dot(K1_hat, self.Z[key])
-        self.L0[key] = dot(self.T[key], L0_hat)
-        self.L1[key] = dot(self.T[key], L1_hat)
+
+        self.K0[key] = K0_hat
+        self.K1[key] = K1_hat
+        self.L0[key] = L0_hat
+        self.L1[key] = L1_hat
 
         self.a_posterior[key] = self.a_prior[key] + dot(K0_hat, self.v[key])
         self.P_infinity_posterior[key] = dot(self.P_infinity_prior[key], L0_hat.T)
         self.P_star_posterior[key] = dot(self.P_infinity_prior[key], L1_hat.T) + dot(
             self.P_star_prior[key], L0_hat.T
         )
-        self.P_posterior[key] = self.diffuse_P(
+        self.P_posterior[key] = self._diffuse_P(
             self.P_star_posterior[key], self.P_infinity_posterior[key]
         )
 
         if all(abs(ravel(self.P_infinity_posterior[key])) <= EPSILON):
             self.d_diffuse = index
+
+    def _diffuse_filter_posterior_recursion_step(self, key):
+        """"""
+        self.K0[key] = dot(self.T[key], self.K0[key])
+        self.K1[key] = dot(self.T[key], self.K1[key])
+        self.L0[key] = dot(self.T[key], self.L0[key])
+        self.L1[key] = dot(self.T[key], self.L1[key])
 
         RQR = dot(dot(self.R[key], self.Q[key]), self.R[key].T)
         a_prior_next = dot(self.T[key], self.a_posterior[key]) + self.c[key]
@@ -455,7 +485,7 @@ class DynamicLinearGaussianModel(object):
         P_star_next = (
             dot(dot(self.T[key], self.P_star_posterior[key]), self.T[key].T) + RQR
         )
-        P_prior_next = self.diffuse_P(P_star_next, P_infinity_next)
+        # P_prior_next = self._diffuse_P(P_star_next, P_infinity_next)
 
         return {
             "a_prior": a_prior_next,
@@ -464,7 +494,7 @@ class DynamicLinearGaussianModel(object):
             "P_star_prior": P_star_next,
         }
 
-    def _filter_recursion_step(self, key):
+    def _filter_prediction_recursion_step(self, key):
         """"""
         self.v[key] = self._prediction_error(key)
         PZ = dot(self.P_prior[key], self.Z[key].T)
@@ -478,6 +508,8 @@ class DynamicLinearGaussianModel(object):
         self.a_posterior[key] = self.a_prior[key] + dot(PZF_inv, self.v[key])
         self.P_posterior[key] = self.P_prior[key] - dot(PZF_inv, PZ.T)
 
+    def _filter_posterior_recursion_step(self, key):
+        """"""
         RQR = dot(dot(self.R[key], self.Q[key]), self.R[key].T)
         a_prior_next = dot(self.T[key], self.a_posterior[key]) + self.c[key]
         P_prior_next = dot(dot(self.T[key], self.P_posterior[key]), self.T[key].T) + RQR
@@ -509,13 +541,7 @@ class DynamicLinearGaussianModel(object):
             else:
                 self._diffuse_smoother_recursion_step(key, index)
 
-        self._finish_smoother()
-
         self.smoother_run = True
-
-    def _finish_smoother(self):
-        """"""
-        pass
 
     def _diffuse_smoother_recursion_step(self, key, index):
         """"""
@@ -614,7 +640,7 @@ class DynamicLinearGaussianModel(object):
         self.N[key] = dot(ZF_inv, self.Z[key]) + dot(
             dot(self.L[key].T, next_N), self.L[key]
         )
-        if index == self.d_diffuse + 1:
+        if self.d_diffuse > -1 and index == self.d_diffuse + 1:
             self.r0[key] = self.r[key]
             self.r1[key] = zeros((self.m, 1))
             self.N0[key] = self.N[key].copy()
@@ -708,7 +734,7 @@ class DynamicLinearGaussianModel(object):
         model_fields = ["Z", "d", "H", "T", "c", "R", "Q"]
         model_data_df = self.model_data_df[model_fields]
 
-        if self.d_diffuse >= 0:
+        if self.diffuse_model:
             a0 = self.a_hat[self.initial_index]
             V0 = self.V[self.initial_index]
             sim_df = self.simulate_model(model_data_df, a0, V0)
@@ -881,7 +907,7 @@ class DynamicLinearGaussianModel(object):
         return result_df
 
     @staticmethod
-    def diffuse_P(P_star, P_infinity):
+    def _diffuse_P(P_star, P_infinity):
         """"""
         result = P_star.copy()
         result[abs(P_infinity) > EPSILON] = inf

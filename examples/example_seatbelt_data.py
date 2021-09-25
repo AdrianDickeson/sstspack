@@ -48,8 +48,7 @@ def get_bivariate_series(data_df):
         array([[data_df.loc[idx, "Front"]], [data_df.loc[idx, "Rear"]]])
         for idx in data_df.index
     ]
-    result = pd.Series(data, index=data_df.index)
-    return result
+    return pd.Series(data, index=data_df.index)
 
 
 if __name__ == "__main__":
