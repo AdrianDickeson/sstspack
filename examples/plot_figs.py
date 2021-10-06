@@ -1,6 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-from numpy import sqrt, linspace, array, hstack, dot, ravel, exp
+from numpy import sqrt, linspace, array, hstack, dot, ravel, exp, reshape
 from scipy.stats import norm, gaussian_kde
 import matplotlib.ticker as mticker
 
@@ -773,44 +773,50 @@ def plot_fig141(y_series, ylog_series):
 
 def plot_fig142(extended_model, c_0, c_mu):
     """"""
-    a_hat = hstack([extended_model.Z[idx][0, 0] for idx in extended_model.index])
-    residuals = hstack(
-        [
-            extended_model.y[idx] - extended_model.a_hat[idx][0, 0]
-            for idx in extended_model.index
-        ]
+    detrended_data = reshape(
+        hstack(
+            [
+                extended_model.y[idx] - extended_model.a_hat[idx][0, 0]
+                for idx in extended_model.index
+            ]
+        ),
+        (len(extended_model.index),),
+    )
+    model_seasonal = reshape(
+        array(
+            [
+                exp(c_0 + c_mu * extended_model.a_hat[idx][0, 0])
+                * extended_model.a_hat[idx][2, 0]
+                for idx in extended_model.index
+            ]
+        ),
+        (len(extended_model.index),),
     )
 
     fig, axs = plt.subplots(2, 1)
     fig.suptitle(f"{UK_VISITORS_DATA_TITLE} - Fig. 14.2", fontsize=14)
 
     ax = axs[0]
-    # ax.plot(extended_model.index, a_hat[2, :])
-    ax.scatter(extended_model.index, residuals)
+    ax.plot(extended_model.index, model_seasonal)
+    ax.scatter(extended_model.index, detrended_data, s=8)
     ax.xaxis.set_major_locator(mticker.MaxNLocator(5))
     ticks_loc = ax.get_xticks()
     ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
+    ax.set_title("Seasonal component")
+    ax.set_ylabel("Deviation from trend")
 
     ax = axs[1]
-    # ax.plot(extended_model.index, a_hat)
-    # for i in [1]:
-    #     ax.plot(
-    #         extended_model.index,
-    #         hstack([extended_model.a_hat[idx][i, 0] for idx in extended_model.index]),
-    #     )
-    Z = array(
-        [
-            extended_model.a_hat[idx][0, 0]
-            + exp(c_0 + c_mu * extended_model.a_hat[idx][0, 0])
-            * extended_model.a_hat[idx][2, 0]
-            for idx in extended_model.index
-        ]
+    ax.plot(
+        extended_model.index,
+        [extended_model.a_hat[idx][0, 0] for idx in extended_model.index],
     )
-    ax.plot(extended_model.index, Z)
     ax.scatter(extended_model.index, extended_model.y, s=2)
     ax.xaxis.set_major_locator(mticker.MaxNLocator(5))
     ticks_loc = ax.get_xticks()
     ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
+    ax.set_title("Trend")
+    ax.set_ylabel("Number of visitors")
+    ax.set_xlabel("Date")
 
     fig.tight_layout(rect=FIG_LAYOUT)
     fig.savefig("figures/fig14.2.pdf")
