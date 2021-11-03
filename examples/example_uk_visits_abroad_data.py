@@ -158,7 +158,7 @@ def get_extended_model_design(parameters, model_template=None, y_series=None, dt
     )
 
 
-if __name__ == "__main__":
+def main():
     # sigma_epsilon = 0.116
     # sigma_zeta = 0.00090
     # c_0 = -5.098
@@ -226,3 +226,7 @@ if __name__ == "__main__":
 
     plt.show()
     print("Finished")
+
+
+if __name__ == "__main__":
+    main()

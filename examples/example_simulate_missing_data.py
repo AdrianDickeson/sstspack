@@ -6,7 +6,8 @@ from sstspack import DynamicLinearGaussianModel as DLGM, GaussianModelDesign as 
 
 pd.set_option("display.max_columns", 100)
 
-if __name__ == "__main__":
+
+def main():
     fn_path = "data/noisy_sin_data.csv"
     data = pd.read_csv(fn_path)
     y = data["Observed"]
@@ -44,3 +45,7 @@ if __name__ == "__main__":
     #     print(ssm.model_data_df.head())
     print(ssm.a_prior_final)
     print(ssm.P_prior_final)
+
+
+if __name__ == "__main__":
+    main()

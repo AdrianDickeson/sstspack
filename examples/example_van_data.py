@@ -32,9 +32,13 @@ def read_van_data():
     return pd.Series(data, index=index[:-1])
 
 
-if __name__ == "__main__":
+def main():
     y_series = read_van_data()
 
     plot_figs.plot_fig143(y_series, None)
 
     plt.show()
+
+
+if __name__ == "__main__":
+    main()

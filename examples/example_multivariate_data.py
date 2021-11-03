@@ -6,11 +6,8 @@ from sstspack import DynamicLinearGaussianModel as DLGM, GaussianModelDesign as 
 
 
 def get_model_and_sim(y, Q_level, H):
-    length = len(y)
-    data_df = md.get_local_level_model_design(length, Q_level, H)
+    data_df = md.get_local_level_model_design(y, Q_level, H)
     ssm = DLGM(y, data_df, np.zeros((1, 1)), np.ones((1, 1)))
-    ssm.filter()
-    ssm.smoother()
     ssm.disturbance_smoother()
     sim = ssm.simulate_smoother()
     return ssm, sim
@@ -32,13 +29,12 @@ def plot_sim(data, ssm, sim, title):
     fig.suptitle(title)
 
 
-if __name__ == "__main__":
+def main():
     fn_path = "data/noisy_cos_data.csv"
     data = pd.read_csv(fn_path)
     y = data.apply(lambda x: np.array([[x["Observed 1"]], [x["Observed 2"]]]), axis=1)
     alpha = data["Actual"]
 
-    epsilon = y - alpha
     eta = np.array(alpha)[1:] - np.array(alpha)[:-1]
     H = np.array([[0.1 ** 2, 0.0], [0.0, 0.2 ** 2]])
     Q_level = np.std(eta) ** 2
@@ -54,3 +50,7 @@ if __name__ == "__main__":
     plot_sim(data, ssm, sim, "Missing Data")
 
     plt.show()
+
+
+if __name__ == "__main__":
+    main()

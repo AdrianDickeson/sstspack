@@ -46,7 +46,7 @@ def motorcycle_spline_model(parameters, model_template, y_timeseries, dt):
     )
 
 
-if __name__ == "__main__":
+def main():
     print("Reading motorcycle data...", end=" ")
     data = read_motorcycle_data()
     y_timeseries = data["Motorcycle Acceleration"]
@@ -88,3 +88,7 @@ if __name__ == "__main__":
     print("finished")
 
     plt.show()
+
+
+if __name__ == "__main__":
+    main()

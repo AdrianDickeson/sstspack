@@ -1,3 +1,5 @@
+import copy
+
 from numpy import (
     dot,
     zeros,
@@ -117,10 +119,9 @@ class DynamicLinearGaussianModel(object):
         """"""
         # Verify y_series.index is a subset of self.index
         assert all(idx in self.index for idx in y_series.index), (
-            f"Elements of y_series.index are not in "
-            + f"model_design.index, elements missing: "
-            + f"{y_series.index[[idx not in self.index for idx in y_series.index]]}"
-        )
+            "Elements of y_series.index are not in "
+            + "model_design.index, elements missing: "
+        ) + f"{y_series.index[[idx not in self.index for idx in y_series.index]]}"
 
         # Verify all data in matrix form
         y_series = y_series.astype(object)
@@ -151,7 +152,10 @@ class DynamicLinearGaussianModel(object):
 
         p = self.p
         for idx in self.index:
-            assert self.y[idx].shape == (p[idx], 1)
+            assert self.y[idx].shape == (p[idx], 1,), (
+                f"y[{idx}].shape has dimension {self.y[idx].shape}, expected: "
+                + f"{(p[idx],1)}"
+            )
 
         for idx in self.index:
             verification_columns = self._verification_columns(p, idx)
@@ -165,7 +169,11 @@ class DynamicLinearGaussianModel(object):
 
                 assert (
                     self.model_data_df.loc[idx, col].shape == verification_columns[col]
-                ), f"model_data_df.{col}[{idx}].shape has dimension {self.model_data_df.loc[idx, col].shape}, expected: {verification_columns[col]}"
+                ), (
+                    f"model_data_df.{col}[{idx}].shape has dimension "
+                    + f"{self.model_data_df.loc[idx, col].shape}, expected: "
+                    + f"{verification_columns[col]}"
+                )
 
     def _check_model_data_columns(self):
         """"""
@@ -307,7 +315,7 @@ class DynamicLinearGaussianModel(object):
     def p(self):
         """"""
         return pd.Series(
-            data=[self.y[key].shape[0] for key in self.index],
+            data=[self.Z[key].shape[0] for key in self.index],
             index=self.index,
         )
 
@@ -790,12 +798,15 @@ class DynamicLinearGaussianModel(object):
 
         if self.F_inverse[key] is pd.NA:
             return log(det(self.F_infinity[key]))
-        return dot(dot(self.v[key], self.F_inverse[key]), self.v[key])[0, 0] - log(
+        return dot(dot(self.v[key].T, self.F_inverse[key]), self.v[key])[0, 0] - log(
             det(self.F_inverse[key])
         )
 
     def __getattr__(self, name):
         """"""
+        if name.startswith("__"):
+            raise AttributeError()
+
         try:
             return self.model_data_df[name]
         except KeyError:
@@ -912,3 +923,12 @@ class DynamicLinearGaussianModel(object):
         result = P_star.copy()
         result[abs(P_infinity) > EPSILON] = inf
         return result
+
+    @property
+    def columns(self):
+        """"""
+        return self.model_data_df.columns
+
+    def copy(self):
+        """"""
+        return copy.deepcopy(self)

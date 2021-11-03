@@ -10,7 +10,7 @@ def read_exchange_rate_data():
     return pd.read_csv("data/sv.dat") / 100
 
 
-if __name__ == "__main__":
+def main():
     y_timeseries = read_exchange_rate_data()
 
     transformed_series = log(y_timeseries ** 2)
@@ -18,3 +18,7 @@ if __name__ == "__main__":
     plot_figs.plot_fig145(y_timeseries, transformed_series, None)
 
     plt.show()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,4 +1,7 @@
+import logging
+
 from numpy import (
+    inf,
     exp,
     sqrt,
     isinf,
@@ -20,6 +23,9 @@ from scipy.optimize import minimize
 from sstspack import DynamicLinearGaussianModel as DLGM
 from sstspack.Utilities import jacobian, hessian
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
 
 def parameter_transform_function(parameter_bounds):
     """"""
@@ -37,7 +43,7 @@ def parameter_transform_function(parameter_bounds):
 
     def constrained_closed_interval(x):
         half_range = 0.5 * (upper_bound - lower_bound)
-        result = half_range * x / sqrt(1 + x * x)
+        result = half_range * x / sqrt(1 + x ** 2)
         return result + (lower_bound + half_range)
 
     if isinf(lower_bound) and isinf(upper_bound):
@@ -64,11 +70,11 @@ def inverse_parameter_transform_function(parameter_bounds):
         return -log(-x + upper_bound)
 
     def inverse_constrained_closed_interval(x):
+        # translate interval to (-1, 1)
         half_range = 0.5 * (upper_bound - lower_bound)
         mid_point = lower_bound + half_range
-        term1 = half_range ** 2 / (x - lower_bound - half_range) ** 2 - 1
-        term2 = sqrt(term1 ** -1)
-        return term2 if x >= mid_point else -term2
+        x1 = (x - mid_point) / half_range
+        return x1 / sqrt(1 - x1 ** 2)
 
     if isinf(lower_bound) and isinf(upper_bound):
         return inverse_unconstrained
@@ -81,89 +87,75 @@ def inverse_parameter_transform_function(parameter_bounds):
 
 class FittedModel:
     def __repr__(self):
-        return "\n".join(
-            "{}:\t{}".format(key, self.__dict__[key]) for key in self.__dict__
-        )
+        return "\n".join(f"{key}:\t{self.__dict__[key]}" for key in self.__dict__)
 
     def __str__(self):
         set_printoptions(precision=5)
-        warning = ""
-        if not self.success:
-            warning = "\nWarning: {}".format(self.message)
+        warning = "\nWarning: {}".format(self.message) if not self.success else ""
         parameters = self.parameter_field_to_str(self.parameters)
         jacobian = self.parameter_field_to_str(self.jacobian)
 
-        return """Maximum Likelihood Results
+        return f"""Maximum Likelihood Results
 --------------------------
-Maximum Log Likelihood Found: {:.5}{}
+Maximum Log Likelihood Found: {self.log_likelihood,:.5}{warning}
 Parameters:
-{}
+{parameters}
 Jacobian:
-{}
+{jacobian}
 Variance Matrix:
-{}""".format(
-            self.log_likelihood,
-            warning,
-            parameters,
-            jacobian,
-            self.fisher_information_matrix,
-        )
+{self.fisher_information_matrix}"""
 
     def parameter_field_to_str(self, field_data):
         """"""
         parameter_names = self.parameter_names
         if parameter_names is None:
             parameter_names = [
-                "Parameter {}".format(idx) for idx in range(len(self.parameters))
+                f"Parameter {idx}" for idx in range(len(self.parameters))
             ]
 
         return "\n".join(
-            "{}: {:.6}".format(parameter_names[idx], field_data[idx])
+            f"{parameter_names[idx]}: {field_data[idx]:.6}"
             for idx in range(len(self.parameters))
         )
 
 
 def fit_model_max_likelihood(
-    params0,
+    initial_parameter_values,
     params_bounds,
     model_func,
     y_series,
-    a0,
-    P0,
-    diffuse_state,
-    model_template=None,
-    parameter_names=None,
-    dt=None,
-    model_class=DLGM,
+    **kwargs,
 ):
     """"""
+    # Obtain optional variables from kwargs
+    parameter_names = kwargs["parameter_names"] if "parameter_names" in kwargs else None
+
+    kwargs["y_series"] = y_series
+
     n = len(y_series)
-    initial_params = [
+    initial_objective_parameters = [
         inverse_parameter_transform_function(params_bounds[idx])(value)
-        for idx, value in enumerate(params0)
+        for idx, value in enumerate(initial_parameter_values)
     ]
 
-    def objective_func(transformed_params, y_series, model_template, dt):
+    def objective_func(transformed_params, kwargs):
         params = [
             parameter_transform_function(params_bounds[idx])(value)
             for idx, value in enumerate(transformed_params)
         ]
-        return inner_objective_func(params, y_series, model_template, dt)
+        return inner_objective_func(params, kwargs)
 
-    def inner_objective_func(params, y_series, model_template, dt):
-        model_data = model_func(params, model_template, y_series, dt)
-        model = model_class(
-            y_series, model_data, a0, P0, diffuse_state, validate_input=False
-        )
+    def inner_objective_func(params, kwargs):
+        model = model_func(params, **kwargs)
         return -model.log_likelihood()
 
     res = minimize(
         objective_func,
-        initial_params,
+        initial_objective_parameters,
         options={"disp": False},
-        args=(y_series, model_template, dt),
+        args=(kwargs,),
         method="BFGS",
-        tol=1.0e-16,
+        tol=1.0e-6,
     )
 
     result = FittedModel()
@@ -179,13 +171,19 @@ def fit_model_max_likelihood(
     )
 
     hess = hessian(
-        inner_objective_func, domain_params, 1e-10, False, y_series, model_template, dt
+        inner_objective_func,
+        domain_params,
+        1e-10,
+        False,
+        kwargs,
     )
 
     result.parameters = domain_params
     dimension = len(domain_params)
     result.parameter_names = parameter_names
     result.log_likelihood = -res.fun
+    logger.debug(f"Best log likelihood found: {result.log_likelihood:.2f}")
+
     result.message = res.message
     result.status = res.status
     result.success = res.success
@@ -198,10 +196,7 @@ def fit_model_max_likelihood(
         result.log_likelihood, dimension, n
     )
 
-    model_data = model_func(result.parameters, model_template, y_series, dt)
-    result.model_data = model_data
-
-    model = model_class(y_series, model_data, a0, P0, diffuse_state)
+    model = model_func(domain_params, **kwargs)
     result.model = model
 
     return result

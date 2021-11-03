@@ -38,13 +38,12 @@ def get_ARMA_model_function(p, q):
     """"""
 
     def internet_ARMA_model_function(parameters, model_template, y_timeseries, dt):
-        result = md.get_ARMA_model_design(
+        return md.get_ARMA_model_design(
             y_timeseries.index,
             parameters[1 : (p + 1)],
             parameters[(p + 1) :],
             full((1, 1), parameters[0]),
         )
-        return result
 
     return internet_ARMA_model_function
 
@@ -115,7 +114,7 @@ def get_ARMA_AIC_model_values(y_timeseries):
     return result
 
 
-if __name__ == "__main__":
+def main():
     data = read_internet_data()["Change"]
     data.index = range(1, len(data) + 1)
     missing_data = data.copy()
@@ -167,3 +166,7 @@ if __name__ == "__main__":
     plot_figs.plot_fig89(model)
 
     plt.show()
+
+
+if __name__ == "__main__":
+    main()

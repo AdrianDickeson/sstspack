@@ -70,11 +70,23 @@ def plot_fig22(ssmodel):
 
     ax = axs[1, 0]
     plot_scatter_line(
-        ax, ssmodel.r, "Smoothing cumulant r (r_t)", (-0.04, 0.024), "error", XLABEL
+        ax,
+        ssmodel.r,
+        "Smoothing cumulant r (r_t)",
+        (-0.04, 0.024),
+        "error",
+        XLABEL,
     )
 
     ax = axs[1, 1]
-    plot_line(ax, ssmodel.N, "N (N_t)", (0.000048, 0.00011), "variance", XLABEL)
+    plot_line(
+        ax,
+        ssmodel.N,
+        "N (N_t)",
+        (0.000048, 0.00011),
+        "variance",
+        XLABEL,
+    )
 
     fig.tight_layout(rect=FIG_LAYOUT)
     fig.savefig("figures/fig2.2.pdf")
@@ -260,7 +272,8 @@ def plot_fig27(ssmodel):
 def plot_fig28(ssmodel):
     """"""
     data_series = ssmodel.model_data_df.apply(
-        lambda x: x["u"].ravel()[0] / sqrt(x["D"].ravel()[0]), axis=1
+        lambda x: x["u"].ravel()[0] / sqrt(x["D"].ravel()[0]),
+        axis=1,
     )
 
     fig, axs = plt.subplots(2, 2)
@@ -275,7 +288,8 @@ def plot_fig28(ssmodel):
     plot_histogram(ax, data_series, "Histogram", (-3.5, 3), "density")
 
     data_series = ssmodel.model_data_df.apply(
-        lambda x: x["r"].ravel()[0] / sqrt(x["N"].ravel()[0]), axis=1
+        lambda x: x["r"].ravel()[0] / sqrt(x["N"].ravel()[0]),
+        axis=1,
     )
 
     ax = axs[1, 0]
@@ -313,13 +327,12 @@ def run_diagnostics(ssmodel):
     q_dict = {i: auto_correlation(forecast_errors, i) for i in range(1, q + 1)}
     Q = n * (n + 2) * sum(q_dict[i] ** 2 / (n - i) for i in range(1, q + 1))
 
-    print("Diagnostic checks")
-    print("=================\n")
-    print(
-        "S: {:.2f}, K: {:.2f}, N: {:.2f}, H({}): {:.2f}, Q({}): {:.2f}".format(
-            S, K, N, h, H, q, Q
-        )
-    )
+    result = "Diagnostic checks\n"
+    result += "=================\n"
+    result += f"S: {S:.2f}, K: {K:.2f}, N: {N:.2f}, H({h}): {H:.2f}, "
+    result += f"Q({q}): {Q:.2f}"
+
+    return result
 
 
 def plot_fig81(seatbelt_df):

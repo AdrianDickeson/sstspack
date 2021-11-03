@@ -1,4 +1,21 @@
 from numpy import zeros
+import logging
+
+
+def getSetupStreamHandler(
+    logging_level=logging.INFO,
+    format="%(asctime)s:%(levelname)s:%(name)s:%(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+):
+    """"""
+    formatter = logging.Formatter(format, datefmt=datefmt)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+    stream_handler.setLevel(logging_level)
+
+    return stream_handler
+
 
 # scipy implementation has issues with different sized matrices
 def block_diag(matrix_list):

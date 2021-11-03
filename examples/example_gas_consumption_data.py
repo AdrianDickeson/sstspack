@@ -41,7 +41,7 @@ def gas_consumption_model(parameters, model_template, y_timeseries, dt):
     return md.combine_model_design([model1, model2])
 
 
-if __name__ == "__main__":
+def main():
     y_timeseries = read_gas_data()
 
     initial_parameter_values = array(
@@ -88,3 +88,7 @@ if __name__ == "__main__":
 
     plt.show()
     print("finished")
+
+
+if __name__ == "__main__":
+    main()

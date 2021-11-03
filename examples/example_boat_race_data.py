@@ -21,7 +21,7 @@ def read_boat_race_data():
     return pd.Series(data)
 
 
-if __name__ == "__main__":
+def main():
     y_timeseries = read_boat_race_data()
     missing_data = y_timeseries == -9999.99
     y_timeseries[missing_data] = 0.5
@@ -29,3 +29,7 @@ if __name__ == "__main__":
     fig, ax = plt.subplots(1)
     ax.plot(y_timeseries)
     plt.show()
+
+
+if __name__ == "__main__":
+    main()

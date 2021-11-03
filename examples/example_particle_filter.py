@@ -11,7 +11,7 @@ from example_nile_data import read_nile_data
 import plot_figs
 
 
-if __name__ == "__main__":
+def main():
     y_timeseries = read_nile_data()
     H = 15099
     Q = 1469.1
@@ -47,3 +47,7 @@ if __name__ == "__main__":
     plot_figs.plot_fig122(pfilter_resampling, gaussian_model)
     plot_figs.plot_fig123(pfilter_resampling, pfilter_aux)
     print("finished")
+
+
+if __name__ == "__main__":
+    main()

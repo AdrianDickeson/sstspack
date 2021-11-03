@@ -6,45 +6,13 @@ import matplotlib.pyplot as plt
 import sstspack.GaussianModelDesign as md
 import sstspack.fitting as fit
 
-from example_nile_data import read_nile_data
-from example_seatbelt_data import read_seatbelt_data
+from example_nile_data import read_nile_data, nile_local_level_model
+from example_seatbelt_data import (
+    read_seatbelt_data,
+    seatbelt_seasonal_model,
+    get_seatbelt_model_template,
+)
 from example_internet_data import read_internet_data, get_ARMA_model_function
-
-
-def nile_local_level_model(parameters, model_template, y_timeseries, dt):
-    model_template.H = [full((1, 1), parameters[0])] * len(model_template)
-    model_template.Q = [full((1, 1), parameters[1])] * len(model_template)
-    return model_template
-
-
-def get_seatbelt_model_template(y_timeseries):
-    H = 1
-    Q = 1
-    sigma2_omega = full(6, 1)
-
-    model_data1 = md.get_local_level_model_design(y_timeseries.index, Q, H)
-    model_data2 = md.get_frequency_domain_seasonal_model_design(
-        y_timeseries.index, 12, sigma2_omega, H
-    )
-
-    model_template = md.combine_model_design([model_data1, model_data2])
-    return model_template
-
-
-def seatbelt_seasonal_model(parameters, model_template, y_timeseries, dt):
-    H = full((1, 1), parameters[0])
-    Q_local = parameters[1]
-    Q_seasonal = parameters[2]
-    Q_full = identity(12)
-    Q_full[0, 0] = Q_local
-    for idx in range(1, 12):
-        Q_full[idx, idx] = Q_seasonal
-
-    for idx in model_template.index:
-        model_template.H[idx] = H
-        model_template.Q[idx] = Q_full
-
-    return model_template
 
 
 def plot_model_summary(model, title, labels, field="a_hat"):
@@ -59,7 +27,7 @@ def plot_model_summary(model, title, labels, field="a_hat"):
     ax.legend()
 
 
-if __name__ == "__main__":
+def main():
     print("Maximum Likelihood Examples")
     print("---------------------------\n")
 
@@ -204,3 +172,7 @@ if __name__ == "__main__":
     print("Time taken: {:.2f} seconds\n".format(end_time - start_time))
 
     plt.show()
+
+
+if __name__ == "__main__":
+    main()

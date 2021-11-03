@@ -22,7 +22,7 @@ def plot_sim(model_sim, title, plot_idx, model_df):
     ax.plot(model_sim.index, alpha[plot_idx, :], c="black")
 
 
-if __name__ == "__main__":
+def main():
     a0 = zeros((1, 1))
     P0 = ones((1, 1))
     local_level_df = md.get_local_level_model_design(100, 10, 100)
@@ -144,3 +144,7 @@ if __name__ == "__main__":
     plot_sim(ARIMA_x_SARIMA_sim, "ARIMA x SARiMA model", 0, ARIMA_x_SARIMA_df)
 
     plt.show()
+
+
+if __name__ == "__main__":
+    main()
