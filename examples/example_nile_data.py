@@ -28,12 +28,17 @@ def read_y_timeseries():
 
 
 def nile_local_level_model(parameters, *args, **kwargs):
-    model_template = kwargs["model_template"]
-    for idx in model_template.index:
-        model_template.H[idx] = full((1, 1), parameters[0])
-        model_template.Q[idx] = full((1, 1), parameters[1])
-    model_template.filter_run = False
-    return model_template
+    model_design = kwargs["model_design"]
+    for idx in model_design.index:
+        model_design.H[idx] = full((1, 1), parameters[0])
+        model_design.Q[idx] = full((1, 1), parameters[1])
+    model_design.filter_run = False
+
+    y_timeseries = kwargs["y_series"]
+    a_initial = kwargs["a_initial"]
+    P_initial = kwargs["P_initial"]
+
+    return DLGM(y_timeseries, model_design, a_initial, P_initial)
 
 
 def main():
@@ -53,8 +58,6 @@ def main():
     a_initial = zeros((1, 1))
     P_initial = full((1, 1), 1e7)
 
-    nile_model_template = DLGM(y_timeseries, nile_model_design, a_initial, P_initial)
-
     start_time = time.time()
     res = fit.fit_model_max_likelihood(
         initial_parameter_values,
@@ -63,7 +66,7 @@ def main():
         y_timeseries,
         a_initial=a_initial,
         P_initial=P_initial,
-        model_template=nile_model_template,
+        model_design=nile_model_design,
         parameter_names=parameter_names,
     )
     end_time = time.time()
