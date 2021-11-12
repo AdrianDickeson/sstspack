@@ -58,7 +58,7 @@ def get_local_linear_trend_model_design(length_index, Q, H, dt=None):
         for i, idx in enumerate(result.index):
             T = result.loc[idx, "T"]
             T[0, 1] = dt[i]
-            result.loc[idx, "T"] = T
+            result["T"][idx] = T
 
             sigma2_zeta_delta = result.Q[idx][1, 1] * dt[i]
             Q = zeros((2, 2))

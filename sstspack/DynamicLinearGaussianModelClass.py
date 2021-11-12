@@ -779,7 +779,7 @@ class DynamicLinearGaussianModel(object):
 
         result = 0
         for index, key in enumerate(self.index):
-            if self.p[key] > 0:
+            if self.p[key] > 0 and not self.is_all_missing(self.y[key]):
                 result += self.p[key] * log(2 * PI)
                 F_inv = self.F_inverse[key]
                 if index <= self.d_diffuse and F_inv is pd.NA:

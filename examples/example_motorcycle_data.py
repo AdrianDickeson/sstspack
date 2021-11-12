@@ -1,4 +1,6 @@
 import re
+import logging
+import time
 
 import pandas as pd
 from numpy import array, zeros, identity, vstack, inf, full
@@ -7,9 +9,13 @@ import matplotlib.pyplot as plt
 from sstspack import (
     GaussianModelDesign as md,
     DynamicLinearGaussianModel as DLGM,
-    fitting as fit,
+    Fitting as fit,
+    Utilities as utl,
 )
 import plot_figs
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 def read_motorcycle_data():
@@ -40,18 +46,23 @@ def read_motorcycle_data():
     return data_df
 
 
-def motorcycle_spline_model(parameters, model_template, y_timeseries, dt):
-    return md.get_spline_smoothing_model_design(
+def motorcycle_spline_model(parameters, *args, **kwargs):
+    y_timeseries = kwargs["y_series"]
+    diffuse_states = kwargs["diffuse_states"]
+    dt = kwargs["dt"]
+    model_design = md.get_spline_smoothing_model_design(
         y_timeseries, parameters[0], parameters[1], dt
+    )
+    return DLGM(
+        y_timeseries, model_design, diffuse_states=diffuse_states, validate_input=False
     )
 
 
 def main():
-    print("Reading motorcycle data...", end=" ")
+    logger.debug("Reading motorcycle data...")
     data = read_motorcycle_data()
     y_timeseries = data["Motorcycle Acceleration"]
     dt = array(data["Time Interval"])
-    print("finished")
 
     # Parameters [ H, Q ]
     initial_parameter_values = array([10000, 1000])
@@ -59,36 +70,36 @@ def main():
     parameter_names = array(["Lambda", "H"])
 
     motorcycle_model_function = motorcycle_spline_model
-    motorcycle_model_template = None
 
-    # Diffuse initialisation used - a0, P0 are ignored
-    a0 = zeros((2, 1))
-    P0 = identity(2)
     diffuse_states = [True, True]
 
-    print("Fitting spline model...", end=" ")
+    logger.debug("Fitting spline model using maximum likelihood")
+    start_time = time.time()
     res = fit.fit_model_max_likelihood(
         initial_parameter_values,
         parameter_bounds,
         motorcycle_model_function,
         y_timeseries,
-        a0,
-        P0,
-        diffuse_states,
-        motorcycle_model_template,
-        parameter_names,
+        diffuse_states=diffuse_states,
+        dt=dt,
+        parameter_names=parameter_names,
     )
-    print("finished")
+    end_time = time.time()
+    logger.debug(
+        "Maximum likelihood search complete. Time taken:- "
+        + f"{end_time-start_time:.2f} seconds"
+    )
 
     model = res.model
     model.disturbance_smoother()
 
-    print("Producing plots...", end=" ")
+    logger.info("Producing figures")
     plot_figs.plot_fig810(model)
-    print("finished")
-
-    plt.show()
 
 
 if __name__ == "__main__":
+    stream_handler = utl.getSetupStreamHandler(logging.DEBUG)
+
+    logger.addHandler(stream_handler)
     main()
+    plt.show()

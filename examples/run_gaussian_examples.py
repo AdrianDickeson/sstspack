@@ -5,18 +5,24 @@ from sstspack import Utilities as utl
 
 import example_nile_data as nile
 import example_seatbelt_data as seatbelt
+import example_internet_data as internet
+import example_motorcycle_data as motorcycle
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-stream_handler = utl.getSetupStreamHandler(logging.INFO)
-
-logger.addHandler(stream_handler)
-
-examples = {"Nile": nile, "Seatbelt": seatbelt}
+examples = {
+    "Nile": nile,
+    "Seatbelt": seatbelt,
+    "Internet": internet,
+    "Motorcycle": motorcycle,
+}
 
 
 if __name__ == "__main__":
+    stream_handler = utl.getSetupStreamHandler(logging.INFO)
+    logger.addHandler(stream_handler)
+
     for name, example in examples.items():
         example.logger.addHandler(stream_handler)
 

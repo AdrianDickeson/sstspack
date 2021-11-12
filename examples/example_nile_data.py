@@ -38,7 +38,7 @@ def nile_local_level_model(parameters, *args, **kwargs):
     a_initial = kwargs["a_initial"]
     P_initial = kwargs["P_initial"]
 
-    return DLGM(y_timeseries, model_design, a_initial, P_initial)
+    return DLGM(y_timeseries, model_design, a_initial, P_initial, validate_input=False)
 
 
 def main():

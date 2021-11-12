@@ -105,7 +105,9 @@ def seatbelt_seasonal_model(parameters, *args, **kwargs):
     y_timeseries = kwargs["y_series"]
     diffuse_states = kwargs["diffuse_states"]
 
-    return DLGM(y_timeseries, model_design, diffuse_states=diffuse_states)
+    return DLGM(
+        y_timeseries, model_design, diffuse_states=diffuse_states, validate_input=False
+    )
 
 
 def bivariate_seatbelt_model(parameters, **kwargs):
@@ -141,7 +143,12 @@ def bivariate_seatbelt_model(parameters, **kwargs):
     diffuse_states = kwargs["diffuse_states"]
 
     return DLGM(
-        y_timeseries, combine_model_design, a_initial, P_initial, diffuse_states
+        y_timeseries,
+        combine_model_design,
+        a_initial,
+        P_initial,
+        diffuse_states,
+        validate_input=False,
     )
 
 
@@ -158,8 +165,6 @@ def main():
     seatbelt_model_function = seatbelt_seasonal_model
     seasonal_model_design = get_seatbelt_model_template(y_timeseries)
 
-    # a_initial = zeros((12, 1))
-    # P_initial = identity(12)
     diffuse_states = [True] * 12
 
     start_time = time.time()
@@ -193,10 +198,6 @@ def main():
         y_timeseries.index, 12, full(6, sigma2_omega), H
     )
 
-    # model_data = md.combine_model_design([model_data1, model_data2])
-    # diffuse_states = [True] * 12
-
-    # seasonal_model = DLGM(y_timeseries, model_data, diffuse_states=diffuse_states)
     seasonal_model = res.model.copy()
     logger.debug("Analysing time series data using seasonal model")
     seasonal_model.disturbance_smoother()
