@@ -1,3 +1,4 @@
+import logging
 import copy
 
 from numpy import (
@@ -20,6 +21,11 @@ from numpy.linalg import inv, det, LinAlgError
 from numpy.random import multivariate_normal as mv_norm
 import pandas as pd
 from pandas import Series, DataFrame, NA
+
+from sstspack.Utilities import d_multivariate_normal
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -780,15 +786,16 @@ class DynamicLinearGaussianModel(object):
         result = 0
         for index, key in enumerate(self.index):
             if self.p[key] > 0 and not self.is_all_missing(self.y[key]):
-                result += self.p[key] * log(2 * PI)
                 F_inv = self.F_inverse[key]
                 if index <= self.d_diffuse and F_inv is pd.NA:
-                    result += self.w(index, key)
+                    result -= 0.5 * self.p[key] * log(2 * PI)
+                    result -= 0.5 * self.w(index, key)
                 else:
-                    result -= log(det(F_inv))
-                    result += dot(dot(self.v[key].T, F_inv), self.v[key])[0, 0]
-        result *= -0.5
+                    result += d_multivariate_normal(
+                        self.v[key], precision=F_inv, log_likelihood=True
+                    )
 
+        logger.debug(f"Log likelihood {result:.2}")
         return result
 
     def w(self, index, key):

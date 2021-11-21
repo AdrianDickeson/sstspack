@@ -97,7 +97,7 @@ class FittedModel:
 
         return f"""Maximum Likelihood Results
 --------------------------
-Maximum Log Likelihood Found: {self.log_likelihood,:.5}{warning}
+Maximum Log Likelihood Found: {self.log_likelihood:.5}{warning}
 Parameters:
 {parameters}
 Jacobian:

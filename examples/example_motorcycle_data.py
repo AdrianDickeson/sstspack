@@ -59,7 +59,7 @@ def motorcycle_spline_model(parameters, *args, **kwargs):
 
 
 def main():
-    logger.debug("Reading motorcycle data...")
+    logger.debug("Reading motorcycle data")
     data = read_motorcycle_data()
     y_timeseries = data["Motorcycle Acceleration"]
     dt = array(data["Time Interval"])

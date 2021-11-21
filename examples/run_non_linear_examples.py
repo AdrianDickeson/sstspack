@@ -3,20 +3,13 @@ import logging
 
 from sstspack import Utilities as utl
 
-import example_nile_data as nile
-import example_seatbelt_data as seatbelt
-import example_internet_data as internet
-import example_motorcycle_data as motorcycle
+import example_particle_filter as pf
+import example_uk_visits_abroad_data as uk_abroad
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-examples = {
-    "Nile": nile,
-    "Seatbelt": seatbelt,
-    "Internet": internet,
-    "Motorcycle": motorcycle,
-}
+examples = {"Particle Filter": pf, "UK visitors abroad": uk_abroad}
 
 
 if __name__ == "__main__":

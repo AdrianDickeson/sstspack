@@ -1,5 +1,7 @@
-from numpy import zeros
 import logging
+
+from numpy import zeros, log, dot, pi as PI, exp
+from numpy.linalg import inv, det
 
 
 def getSetupStreamHandler(
@@ -100,3 +102,20 @@ def hessian(func, x, h=1e-5, relative=False, *args):
 def identity_fn(x):
     """"""
     return x
+
+
+# Statistical functions
+def d_multivariate_normal(x, mu=None, sigma=None, precision=None, log_likelihood=False):
+    """"""
+    if sigma is not None:
+        precision = inv(sigma)
+
+    p = x.shape[0]
+    y = x if mu is None else x - mu
+    result = 0.5 * (
+        log(det(precision)) - p * log(2 * PI) - dot(dot(y.T, precision), y)[0, 0]
+    )
+
+    if log_likelihood:
+        return result
+    return exp(result)

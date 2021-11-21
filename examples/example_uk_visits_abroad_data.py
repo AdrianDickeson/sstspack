@@ -1,4 +1,5 @@
 import time
+import logging
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -23,13 +24,16 @@ from numpy import (
 import numpy as np
 import scipy.stats as stats
 
-import sstspack.GaussianModelDesign as md
+import sstspack.DynamicLinearGaussianModelClass as DLGMC
 from sstspack.ExtendedModelDesign import get_nonlinear_model_design
 from sstspack.ExtendedDynamicModelClass import ExtendedDynamicModel as EKF
 from sstspack.Utilities import identity_fn
-import sstspack.fitting as fit
+from sstspack import Fitting as fit, Utilities as utl, GaussianModelDesign as md
 
 import plot_figs
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 def read_uk_visits_abroad_data():
@@ -128,7 +132,7 @@ def log_pandas_series(series):
     return result
 
 
-def get_extended_model_design(parameters, model_template=None, y_series=None, dt=None):
+def get_extended_model(parameters, *args, **kwargs):
     """"""
     T_trend = md.get_local_linear_trend_model_design(1, identity(2), ones((1, 1)))
     T_seasonal = md.get_time_domain_seasonal_model_design(1, 12, 1, 1)
@@ -153,9 +157,15 @@ def get_extended_model_design(parameters, model_template=None, y_series=None, dt
 
     H_fn = get_H_fn(H)
 
-    return get_nonlinear_model_design(
+    y_series = kwargs["y_series"]
+    a_initial = kwargs["a_initial"]
+    P_initial = kwargs["P_initial"]
+
+    model_design = get_nonlinear_model_design(
         y_series, Z_fn, T_fn, R_fn, Q_fn, H_fn, Z_prime_fn
     )
+
+    return EKF(y_series, model_design, a_initial, P_initial, validate_input=False)
 
 
 def main():
@@ -172,61 +182,55 @@ def main():
     c_0 = -5.098
     c_mu = 0.00025
 
-    set_printoptions(precision=2)
+    logger.debug("Reading UK visitors abroad data")
     y_series = read_uk_visits_abroad_data()
     ylog_series = log_pandas_series(y_series)
 
     initial_parameter_values = array([sigma2_epsilon, sigma2_trend, c_0, c_mu])
-    extended_model_function = get_extended_model_design
-    extended_model_design_template = get_extended_model_design(
-        initial_parameter_values, y_series=y_series
-    )
+    initial_parameter_values = array([1e-1, 1e-3, -5, 1e-4])
+    extended_model_function = get_extended_model
 
     parameter_bounds = array([(0, inf), (0, inf), (-6, 6), (-0.05, 0.05)])
     parameter_names = array(["H", "Q_trend", "c_0", "c_mu"])
 
-    # Diffuse initialisation used - a0, P0 are ignored
-    a0 = zeros((14, 1))
-    P0 = 1e6 * identity(14)
-    # diffuse_states = [True] * 14
-    diffuse_states = [False] * 14
+    a_initial = zeros((14, 1))
+    P_initial = 1e6 * identity(14)
 
-    parameters = array([sigma2_epsilon, sigma2_trend, c_0, c_mu])
+    logger.debug("Fitting extended dynamic linear model using maximum likelihood")
     start_time = time.time()
     res = fit.fit_model_max_likelihood(
         initial_parameter_values,
         parameter_bounds,
         extended_model_function,
         y_series,
-        a0,
-        P0,
-        diffuse_states,
-        extended_model_design_template,
-        parameter_names,
-        model_class=EKF,
+        a_initial=a_initial,
+        P_initial=P_initial,
+        parameter_names=parameter_names,
+        # model_class=EKF,
     )
     end_time = time.time()
+    logger.debug(
+        "Maximum likelihood search complete. Time taken:- "
+        + f"{end_time-start_time:.2f} seconds"
+    )
 
+    for idx, name in enumerate(res.parameter_names):
+        logger.debug(f"Maximum likelihood {name}: {res.parameters[idx]:.4}")
+
+    logger.debug("Running extended Kalman filter and smoother")
     extended_model = res.model
     extended_model.smoother()
 
-    print("Extended KF: UK Visitors Abroad Data")
-    print("------------------------------------")
-    print(res)
-    print(f"Time taken: {end_time - start_time:.2f} seconds\n")
-
-    # extended_model_design = get_extended_model_design(parameters, None, y_series, None)
-
-    # extended_model = EKF(y_series, extended_model_design, a0, P0, diffuse_states)
-    # extended_model.smoother()
-
+    logger.info("Producing figures")
     plot_figs.plot_fig141(y_series, ylog_series)
-    # plot_figs.plot_fig142(extended_model, c_0, c_mu)
     plot_figs.plot_fig142(extended_model, res.parameters[2], res.parameters[3])
-
-    plt.show()
-    print("Finished")
 
 
 if __name__ == "__main__":
+    stream_handler = utl.getSetupStreamHandler(logging.DEBUG)
+
+    logger.addHandler(stream_handler)
+    fit.logger.addHandler(stream_handler)
+    DLGMC.logger.addHandler(stream_handler)
     main()
+    plt.show()

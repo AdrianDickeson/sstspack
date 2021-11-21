@@ -190,7 +190,7 @@ def main():
     model = res.model.copy()
     model.filter()
 
-    logger.debug("Producing tables")
+    logger.info("Producing tables")
     latex_tables.latex_table81(AIC_values)
     latex_tables.latex_table82(missing_AIC_values)
 
