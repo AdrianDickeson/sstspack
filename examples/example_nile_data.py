@@ -47,7 +47,7 @@ def main():
 
     logger.debug("Fitting local level state space model by maximum likelihood")
     initial_parameter_values = array([10000, 1000])
-    parameter_bounds = array([(10, inf), (10, inf)])
+    parameter_bounds = array([(0, inf), (0, inf)])
     parameter_names = array(["H", "Q"])
 
     nile_model_function = nile_local_level_model
