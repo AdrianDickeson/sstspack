@@ -75,13 +75,12 @@ def main():
         + f"{end_time-start_time:.2f} seconds"
     )
 
-    H = 15099
-    sigma2_eta = 1469.1
-    logger.debug(f"Maximum likelihood H: {res.parameters[0]:.1f},\tExpected: {H:.0f}")
-    logger.debug(
-        f"Maximum likelihood sigma2_eta: {res.parameters[1]:.2f},\t"
-        + f"Expected: {sigma2_eta:.1f}"
-    )
+    textbook_parameters = {"H": 15099.0, "Q": 1469.1}
+    for idx, name in enumerate(res.parameter_names):
+        logger.debug(
+            f"Maximum likelihood {name}: {res.parameters[idx]:.4} "
+            + f"From textbook: {textbook_parameters[name]:.4}"
+        )
 
     logger.debug("Analysing time series data")
     ssm = res.model.copy()

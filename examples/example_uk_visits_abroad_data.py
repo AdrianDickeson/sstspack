@@ -169,25 +169,18 @@ def get_extended_model(parameters, *args, **kwargs):
 
 
 def main():
-    # sigma_epsilon = 0.116
-    # sigma_zeta = 0.00090
-    # c_0 = -5.098
-    # c_mu = 2.5e-4  # 0.0984
-    # sigma_kappa = 0.00088
-    # rho = 0.921
-    # lambda_c = 2 * PI / 589
-
-    sigma2_epsilon = 0.116
-    sigma2_trend = 0.00088
-    c_0 = -5.098
-    c_mu = 0.00025
+    textbook_parameters = {
+        "H": 0.116,
+        "Q_trend": 0.00088,
+        "c_0": -5.098,
+        "c_mu": 0.00025,
+    }
 
     logger.debug("Reading UK visitors abroad data")
     y_series = read_uk_visits_abroad_data()
     ylog_series = log_pandas_series(y_series)
 
-    initial_parameter_values = array([sigma2_epsilon, sigma2_trend, c_0, c_mu])
-    initial_parameter_values = array([1e-1, 1e-3, -5, 1e-4])
+    initial_parameter_values = array([1e-1, 1e-2, -5, 1e-2])
     extended_model_function = get_extended_model
 
     parameter_bounds = array([(0, inf), (0, inf), (-6, 6), (-0.05, 0.05)])
@@ -196,17 +189,16 @@ def main():
     a_initial = zeros((14, 1))
     P_initial = 1e6 * identity(14)
 
-    logger.debug("Fitting extended dynamic linear model using maximum likelihood")
+    logger.debug("Fitting extended dynamic model using maximum likelihood")
     start_time = time.time()
     res = fit.fit_model_max_likelihood(
         initial_parameter_values,
         parameter_bounds,
         extended_model_function,
-        y_series,
+        ylog_series,
         a_initial=a_initial,
         P_initial=P_initial,
         parameter_names=parameter_names,
-        # model_class=EKF,
     )
     end_time = time.time()
     logger.debug(
@@ -215,7 +207,10 @@ def main():
     )
 
     for idx, name in enumerate(res.parameter_names):
-        logger.debug(f"Maximum likelihood {name}: {res.parameters[idx]:.4}")
+        logger.debug(
+            f"Maximum likelihood {name}: {res.parameters[idx]:.4} "
+            + f"From textbook: {textbook_parameters[name]:.4}"
+        )
 
     logger.debug("Running extended Kalman filter and smoother")
     extended_model = res.model
@@ -230,7 +225,7 @@ if __name__ == "__main__":
     stream_handler = utl.getSetupStreamHandler(logging.DEBUG)
 
     logger.addHandler(stream_handler)
-    fit.logger.addHandler(stream_handler)
-    DLGMC.logger.addHandler(stream_handler)
+    # fit.logger.addHandler(stream_handler)
+    # DLGMC.logger.addHandler(stream_handler)
     main()
     plt.show()

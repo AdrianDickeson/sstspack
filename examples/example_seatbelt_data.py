@@ -183,19 +183,20 @@ def main():
         + f"{end_time-start_time:.2f} seconds"
     )
 
-    H = 3.41598e-3
-    Q = 9.35852e-4
-    sigma2_omega = 5.01096e-7
-    logger.debug(f"Maximum likelihood H: {res.parameters[0]:.5},\tExpected: {H:.5}")
-    logger.debug(f"Maximum likelihood Q: {res.parameters[1]:.5},\tExpected: {Q:.5}")
-    logger.debug(
-        f"Maximum likelihood sigma2_omega: {res.parameters[2]:.5},\t"
-        + f"Expected: {sigma2_omega:.5}"
-    )
+    textbook_parameters = {
+        "H": 3.41598e-3,
+        "Q_trend": 9.35852e-4,
+        "Q_seasonal": 5.01096e-7,
+    }
+    for idx, name in enumerate(res.parameter_names):
+        logger.debug(
+            f"Maximum likelihood {name}: {res.parameters[idx]:.4} "
+            + f"From textbook: {textbook_parameters[name]:.4}"
+        )
 
     model_data1 = md.get_local_level_model_design(y_timeseries.index, Q, H)
     model_data2 = md.get_frequency_domain_seasonal_model_design(
-        y_timeseries.index, 12, full(6, sigma2_omega), H
+        y_timeseries.index, 12, full(6, res.parameters[2]), H
     )
 
     seasonal_model = res.model.copy()
