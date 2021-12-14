@@ -5,7 +5,7 @@ import os
 import logging
 
 import pandas as pd
-from numpy import array, full, nan, inf, zeros, identity
+from numpy import array, full, nan, inf, zeros, identity, where, amin, isnan
 from numpy.linalg import LinAlgError
 import matplotlib.pyplot as plt
 
@@ -21,6 +21,13 @@ import latex_tables
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+
+def min_element(AIC_scores):
+    """"""
+    AIC_scores = AIC_scores.copy()
+    AIC_scores[isnan(AIC_scores)] = inf
+    return where(AIC_scores == amin(AIC_scores))
 
 
 def read_internet_data():
@@ -67,7 +74,7 @@ def get_ARMA_model_function(p, q):
     return internet_ARMA_model_function
 
 
-def get_ARMA_model_AIC(args):  # p, q, y_timeseries):
+def get_ARMA_model_AIC(args):
     """"""
     p = args[0]
     q = args[1]
@@ -141,6 +148,8 @@ def main():
     logger.debug(
         "Calculation complete, " + f"time taken {end_time-start_time:.2f} seconds"
     )
+    best_model = min_element(AIC_values)
+    logger.debug(f"Highest quality model - p: {best_model[0][0]} q: {best_model[1][0]}")
 
     logger.debug("Calculating AIC values with missing data")
     start_time = time.time()
@@ -149,6 +158,8 @@ def main():
     logger.debug(
         "Calculation complete, " + f"time taken {end_time-start_time:.2f} seconds"
     )
+    best_model = min_element(missing_AIC_values)
+    logger.debug(f"Highest quality model - p: {best_model[0][0]} q: {best_model[1][0]}")
 
     logger.debug("Appending missing data to time series")
     extended_y_timeseries = y_timeseries.append(
@@ -161,10 +172,6 @@ def main():
     parameter_names = array(["Q", "phi", "theta"])
 
     internet_model_function = get_ARMA_model_function(1, 1)
-    # model_design = md.get_ARMA_model_design(
-    #     extended_y_timeseries.index, [0.8], [0.2], full((1, 1), 10)
-    # )
-
     diffuse_states = [True, True]
 
     start_time = time.time()
@@ -174,7 +181,6 @@ def main():
         internet_model_function,
         extended_y_timeseries,
         diffuse_states=diffuse_states,
-        # model_design=model_design,
         parameter_names=parameter_names,
     )
     end_time = time.time()
@@ -183,9 +189,11 @@ def main():
         + f"{end_time-start_time:.2f} seconds"
     )
 
-    logger.debug(f"Maximum likelihood Q: {res.parameters[0]:.1f},\tExpected: {0:.0f}")
-    logger.debug(f"Maximum likelihood p: {res.parameters[1]:.1f},\tExpected: {0:.0f}")
-    logger.debug(f"Maximum likelihood q: {res.parameters[2]:.1f},\tExpected: {0:.0f}")
+    for idx, name in enumerate(res.parameter_names):
+        logger.debug(
+            f"Maximum likelihood {name}: {res.parameters[idx]:.4} "
+            # + f"From textbook: {textbook_parameters[name]:.4}"
+        )
 
     model = res.model.copy()
     model.filter()

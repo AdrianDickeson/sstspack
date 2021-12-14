@@ -90,7 +90,13 @@ def main():
         + f"{end_time-start_time:.2f} seconds"
     )
 
-    model = res.model
+    for idx, name in enumerate(res.parameter_names):
+        logger.debug(
+            f"Maximum likelihood {name}: {res.parameters[idx]:.4} "
+            # + f"From textbook: {textbook_parameters[name]:.4}"
+        )
+
+    model = res.model.copy()
     model.disturbance_smoother()
 
     logger.info("Producing figures")

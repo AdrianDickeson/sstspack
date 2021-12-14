@@ -1,10 +1,22 @@
+import logging
+
 from numpy import dot, reshape, zeros, identity, ravel, full
 from numpy.linalg import inv, LinAlgError
 import pandas as pd
 
 from sstspack import DynamicLinearGaussianModel
-from sstspack.Utilities import jacobian
+from sstspack.Utilities import d_multivariate_normal, jacobian
 from sstspack.DynamicLinearGaussianModelClass import EPSILON
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+
+def log_multivariate_gaussian(
+    x, mu=None, Sigma=None, precision=None, log_likelihood=False
+):
+    """"""
+    return d_multivariate_normal(x, precision=precision, log_likelihood=log_likelihood)
 
 
 class ExtendedDynamicModel(DynamicLinearGaussianModel):
@@ -305,3 +317,23 @@ class ExtendedDynamicModel(DynamicLinearGaussianModel):
 
             self.filter()
             self.smoother()
+
+    def log_likelihood(self, epsilon_pdf=log_multivariate_gaussian):
+        """"""
+        if not self.filter_run:
+            self.filter()
+
+        result = 0
+        for index, key in enumerate(self.index):
+            if self.p[key] > 0 and not self.is_all_missing(self.y[key]):
+                F_inv = self.F_inverse[key]
+                if index <= self.d_diffuse and F_inv is pd.NA:
+                    result -= 0.5 * self.p[key] * log(2 * PI)
+                    result -= 0.5 * self.w(index, key)
+                else:
+                    result += epsilon_pdf(
+                        self.v[key], precision=F_inv, log_likelihood=True
+                    )
+
+        logger.debug(f"Log likelihood {result:.2}")
+        return result

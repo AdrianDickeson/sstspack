@@ -185,7 +185,7 @@ def main():
 
     textbook_parameters = {
         "H": 3.41598e-3,
-        "Q_trend": 9.35852e-4,
+        "Q_local": 9.35852e-4,
         "Q_seasonal": 5.01096e-7,
     }
     for idx, name in enumerate(res.parameter_names):
@@ -194,9 +194,11 @@ def main():
             + f"From textbook: {textbook_parameters[name]:.4}"
         )
 
-    model_data1 = md.get_local_level_model_design(y_timeseries.index, Q, H)
+    model_data1 = md.get_local_level_model_design(
+        y_timeseries.index, res.parameters[1], res.parameters[0]
+    )
     model_data2 = md.get_frequency_domain_seasonal_model_design(
-        y_timeseries.index, 12, full(6, res.parameters[2]), H
+        y_timeseries.index, 12, full(6, res.parameters[2]), res.parameters[0]
     )
 
     seasonal_model = res.model.copy()
@@ -274,12 +276,11 @@ def main():
         + f"{end_time-start_time:.2f} seconds"
     )
 
-    logger.debug(f"Maximum likelihood H_front: {res.parameters[0]:.5f}")
-    logger.debug(f"Maximum likelihood H_rear: {res.parameters[1]:.5f}")
-    logger.debug(f"Maximum likelihood rho_H: {res.parameters[2]:.3f}")
-    logger.debug(f"Maximum likelihood Q_front: {res.parameters[3]:.5f}")
-    logger.debug(f"Maximum likelihood Q_rear: {res.parameters[4]:.5f}")
-    logger.debug(f"Maximum likelihood rho_Q: {res.parameters[5]:.3f}")
+    for idx, name in enumerate(res.parameter_names):
+        logger.debug(
+            f"Maximum likelihood {name}: {res.parameters[idx]:.4} "
+            # + f"From textbook: {textbook_parameters[name]:.4}"
+        )
 
     logger.debug("Analysing bivariate time series data")
     bivariate_model.disturbance_smoother()
