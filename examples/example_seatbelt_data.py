@@ -21,6 +21,7 @@ from numpy import (
 import matplotlib.pyplot as plt
 
 from sstspack import (
+    DynamicLinearGaussianModelClass as DLGMC,
     DynamicLinearGaussianModel as DLGM,
     Fitting as fit,
     Utilities as utl,
@@ -299,5 +300,6 @@ if __name__ == "__main__":
     stream_handler = utl.getSetupStreamHandler(logging.DEBUG)
 
     logger.addHandler(stream_handler)
+    # DLGMC.logger.addHandler(stream_handler)
     main()
     plt.show()

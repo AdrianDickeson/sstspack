@@ -43,10 +43,6 @@ class DynamicLinearGaussianModel(object):
 
     expected_columns = ("Z", "d", "H", "T", "c", "R", "Q")
     estimation_columns = [
-        "y_original",
-        "Z_original",
-        "d_original",
-        "H_original",
         "a_prior",
         "a_posterior",
         "P_prior",
@@ -89,6 +85,12 @@ class DynamicLinearGaussianModel(object):
         "N1",
         "N2",
     ]
+    _original_column_names = [
+        "y_original",
+        "Z_original",
+        "d_original",
+        "H_original",
+    ]
 
     def __init__(
         self,
@@ -102,12 +104,17 @@ class DynamicLinearGaussianModel(object):
         """
         Constructor
         """
+        logger.debug("Creating Dynamic Linear Gaussian Model object")
         self._m = None
         self.model_data_df = model_design_df.copy()
 
         if validate_input:
+            logger.debug("Validating input data")
             y_series = self._validate_y_series(y_series)
         self._insert_column(y_series, "y", 0)
+        if any(self.is_partial_missing(self.y[idx]) for idx in self.index):
+            self._add_columns_to_data_df(self._original_column_names)
+            self._fill_original_columns()
 
         self._add_columns_to_data_df(self.estimation_columns)
         self._initialise_model_data(a_prior_initial)
@@ -120,6 +127,14 @@ class DynamicLinearGaussianModel(object):
         self.filter_run = False
         self.smoother_run = False
         self.disturbance_smoother_run = False
+
+    def _fill_original_columns(self):
+        """"""
+        data_columns = [name.split("_")[0] for name in self._original_column_names]
+        for idx, col in enumerate(data_columns):
+            self.model_data_df[self._original_column_names[idx]] = self.model_data_df[
+                col
+            ].copy()
 
     def _validate_y_series(self, y_series):
         """"""
@@ -377,11 +392,6 @@ class DynamicLinearGaussianModel(object):
     def _adapt_row_to_any_missing_data(self, row):
         """"""
         v_shape = (self.p[row], 1)
-        if self.is_partial_missing(self.y[row]):
-            self.y_original[row] = self.y[row].copy()
-            self.Z_original[row] = self.Z[row].copy()
-            self.d_original[row] = self.d[row].copy()
-            self.H_original[row] = self.H[row].copy()
 
         if self.is_all_missing(self.y[row]):
             self.Z[row] = zeros(self.Z[row].shape)
@@ -397,6 +407,7 @@ class DynamicLinearGaussianModel(object):
         """
         Perform the Kalman filter with the y data series and the model design
         """
+        logger.debug("Performing Kalman filter")
         for index, key in enumerate(self.index):
             self._non_missing_F(key)
             self._adapt_row_to_any_missing_data(key)
@@ -430,8 +441,13 @@ class DynamicLinearGaussianModel(object):
 
     def _non_missing_F(self, key):
         """"""
-        PZ = dot(self.P_prior[key], self.Z[key].T)
-        self.F[key] = dot(self.Z[key], PZ) + self.H[key]
+        ZPZ = (
+            dot(self.Z_original[key], dot(self.P_prior[key], self.Z_original[key].T))
+            if "Z_original" in self.columns
+            else dot(self.Z[key], dot(self.P_prior[key], self.Z[key].T))
+        )
+        H = self.H_original[key] if "H_original" in self.columns else self.H[key]
+        self.F[key] = ZPZ + H
 
     def _diffuse_filter_prediction_recursion_step(self, key, index):
         """"""
@@ -480,6 +496,7 @@ class DynamicLinearGaussianModel(object):
         )
 
         if all(abs(ravel(self.P_infinity_posterior[key])) <= EPSILON):
+            logger.debug(f"Non diffuse state achieved at index {self.index[index]}")
             self.d_diffuse = index
 
     def _diffuse_filter_posterior_recursion_step(self, key):
@@ -532,6 +549,7 @@ class DynamicLinearGaussianModel(object):
 
     def smoother(self):
         """"""
+        logger.debug("Performing smoother")
         if not self.filter_run:
             self.filter()
 
@@ -668,6 +686,7 @@ class DynamicLinearGaussianModel(object):
 
     def disturbance_smoother(self):
         """"""
+        logger.debug("Performing disturbance smoother")
         if not self.smoother_run:
             self.smoother()
 

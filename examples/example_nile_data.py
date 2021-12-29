@@ -7,6 +7,7 @@ from numpy import full, array, inf, zeros
 import matplotlib.pyplot as plt
 
 from sstspack import (
+    DynamicLinearGaussianModelClass as DLGMC,
     DynamicLinearGaussianModel as DLGM,
     GaussianModelDesign as md,
     Fitting as fit,
@@ -121,6 +122,7 @@ if __name__ == "__main__":
 
     logger.addHandler(stream_handler)
     fit.logger.addHandler(stream_handler)
+    # DLGMC.logger.addHandler(stream_handler)
     try:
         main()
     except Exception as ex:
