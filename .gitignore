@@ -8,3 +8,4 @@ example_pkg_YOUR_USERNAME_HERE.egg-info/
 *.log
 *.aux
 *_old.py
+sstspack_venv
